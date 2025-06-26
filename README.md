@@ -1,1 +1,1 @@
-# marva_editor
+# Marva Quartz for Blue Core
