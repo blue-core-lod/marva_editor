@@ -38,6 +38,7 @@
 
 
 <script>
+  import keycloak from '@/lib/keycloak'
   import { useProfileStore } from '@/stores/profile'
   import { usePreferenceStore } from '@/stores/preference'
   import { useConfigStore } from '@/stores/config'
@@ -696,6 +697,14 @@
         // anything after this point will  be on the right of nav menu
         menu.push({ is: "spacer" })
 
+        menu.push({
+          text: "Logout",
+          icon: "logout",
+          click: () => {
+            const redirectUri = window.location.origin + '/bfe2/quartz/'
+            keycloak.logout({ redirectUri })
+          }
+        })
 
 
         menu.push(
@@ -732,6 +741,11 @@
     // },
 
     methods: {
+
+      logout() {
+        const redirectUri = window.location.origin + '/bfe2/quartz/'
+        keycloak.logout({ redirectUri })
+      },
 
       isStaging: function(){
         if (useConfigStore().returnUrls.env == "staging" || useConfigStore().returnUrls.dev == true){
