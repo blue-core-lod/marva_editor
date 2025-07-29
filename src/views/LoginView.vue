@@ -12,25 +12,68 @@ function doLogin() {
 
 <template>
   <div class="login-page">
-    <h1>Bluecore Marva</h1>
-    <button @click="doLogin">Click here to login</button>
+    <div class="login-card">
+      <div class="brand">
+        <img src="@/assets/bluecore-small.png" alt="Bluecore Logo" class="logo" />
+        <span class="brand-text"><strong>Marva</strong></span>
+      </div>
+      <button class="login-button" @click="doLogin">Log In with Keycloak</button>
+    </div>
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+// Assumes SCSS color variables are globally available
+
 .login-page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  background-color: $bluecore-bkgrd;
   height: 100vh;
-  font-family: sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-button {
-  margin-top: 20px;
-  padding: 12px 24px;
-  font-size: 1.1rem;
+.login-card {
+  background-color: $bluecore-header;
+  border-radius: 12px;
+  padding: 2rem 3rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.logo {
+  height: 36px;
+  width: auto;
+}
+
+.brand-text {
+  font-size: 1.6rem;
+  color: $orient;
+  font-weight: bold;
+}
+
+.login-button {
+  background-color: $orient;
+  color: $spring-wood;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
   cursor: pointer;
+
+  &:hover {
+    background-color: darken($orient, 8%);
+  }
 }
 </style>
