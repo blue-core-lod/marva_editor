@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@jobinsjp/vue3-datatable": "^1.0.15",
+    "bootstrap": "^5.3.7",
     "edtf": "^4.6.0",
     "floating-vue": "^2.0.0-beta.20",
     "hash-wasm": "^4.12.0",
@@ -51,6 +52,7 @@
     "eslint-plugin-vue": "^9.14.1",
     "jsdom": "^26.1.0",
     "prettier": "^2.8.8",
+    "sass": "^1.89.2",
     "start-server-and-test": "^2.0.0",
     "vite": "^5.2.11",
     "vitest": "^3.1.1"

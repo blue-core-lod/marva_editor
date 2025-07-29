@@ -11,7 +11,14 @@ export default defineConfig({
   // build: {
   //   sourcemap: true,
   //   minify: false,
-  // },  
+  // },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@import "@/assets/colors.scss";`,
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
