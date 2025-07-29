@@ -12,60 +12,38 @@ import "./assets/main.css";
 import 'vue-final-modal/style.css'
 import 'floating-vue/dist/style.css'
 
-const i18n = createI18n({
-	locale: 'en', // set locale
-	// fallbackLocale: 'en', // set fallback locale
-	messages: i18nMessages, // set locale messages
+import Main from "./components/panels/edit/fields/Main.vue"
+
+import keycloak from './lib/keycloak'
+
+keycloak.init({ onLoad: 'login-required' }).then(authenticated => {
+	if (!authenticated) {
+		console.warn("Not authenticated!")
+		keycloak.login()
+		return
+	}
+
+	const i18n = createI18n({
+		locale: 'en',
+		messages: i18nMessages, // set locale messages
+	});
+
+	const app = createApp(App)
+
+	app.config.errorHandler = (err, vm, info) => {
+		console.error(err, vm, info)
+	}
+
+	app.component('Main', Main)
+
+	app.use(createPinia())
+	app.use(router)
+	app.use(i18n)
+	app.use(FloatingVue)
+	app.use(createVfm())
+
+	app.mount("#app")
+
+}).catch(err => {
+	console.error("Keycloak init failed", err)
 })
-
-
-const app = createApp(App);
-
-app.config.errorHandler = (err, vm, info) => {
-	// Handle the error
-	console.error(err, vm, info);
-  };
-  
-
-
-
-// import this one component globally since we use it recursively 
-import Main from "./components/panels/edit/fields/Main.vue";
-app.component('Main', Main)
-
-// import MainInline from "./components/panels/edit/fields/MainInline.vue";
-// app.component('MainInline', MainInline)
-
-
-
-
-
-
-const vfm = createVfm()
-app.use(vfm)
-
-
-app.use(createPinia());
-app.use(router);
-app.use(i18n)
-app.use(FloatingVue)
-
-app.mount("#app");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
