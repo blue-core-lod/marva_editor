@@ -15,7 +15,7 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: `@import "@/assets/colors.scss";`,
+        additionalData: `@use "@/assets/colors.scss" as *;`,
       },
     },
   },
@@ -23,8 +23,6 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
       'vue-i18n': 'vue-i18n/dist/vue-i18n.cjs.js',
-
-
     },
   },
   test:{
