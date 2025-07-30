@@ -56,7 +56,8 @@
                 <template #tbody="{ row }">
 
                   <td>
-                    <a v-if="row.Status=='unposted'" :href="'/bfe2/quartz/edit/' + row.Id" @click.prevent="loadFromAllRecord(row.Id)">{{ row.Id }}</a>
+                    <!--   <a v-if="row.Status=='unposted'" :href="'/bfe2/quartz/edit/' + row.Id" @click.prevent="loadFromAllRecord(row.Id)">{{ row.Id }}</a>  -->
+                    <a v-if="row.Status=='unposted'" :href="base + 'edit/' + row.Id" @click.prevent="loadFromAllRecord(row.Id)">{{ row.Id }}</a> <!--  todo: test to ensure working  -->
                     <a v-else :href="'#'+row.Id" @click="reloadRecord(row)">Load from BFDB</a>
                   </td>
 
@@ -409,7 +410,7 @@ export default {
   components: { Splitpanes, Pane, Nav, DataTable, CopyCat },
   data() {
     return {
-
+      base: import.meta.env.BASE_URL,
       urlToLoad: '',
       urlToLoadTimer: null,
 
