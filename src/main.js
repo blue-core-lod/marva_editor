@@ -15,7 +15,16 @@ import "vue-final-modal/style.css";
 import "floating-vue/dist/style.css";
 
 const base = import.meta.env.BASE_URL;
-const keycloakAuthPath = import.meta.env.KEYCLOAK_AUTH_PATH; // "http://localhost:8081/keycloak/realms/bluecore"
+const keycloakAuthPath = import.meta.env.VITE_KEYCLOAK_AUTH_PATH; // "http://localhost:8081/keycloak/realms/bluecore"
+
+function cleanUrl(router) {
+    router.afterEach((to) => {
+        console.log("to.fullPath: ", to.fullPath)
+        if (to.fullPath.includes('#state') || to.fullPath.includes('#error')) {
+            history.replaceState(null, '', window.location.pathname);
+        }
+    });
+}
 
 function initApp(extraProps = {}) {
     const i18n = createI18n({
@@ -38,6 +47,7 @@ function initApp(extraProps = {}) {
     app.use(createVfm());
 
     app.mount("#app");
+    cleanUrl(router);
 }
 
 // Check if Keycloak is available before proceeding
