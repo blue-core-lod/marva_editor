@@ -1,7 +1,10 @@
 <script setup>
+import { useRoute } from 'vue-router'
 import keycloak from '@/lib/keycloak'
 
 const base = import.meta.env.BASE_URL
+const route = useRoute()
+const kcUnavailable = route.query.kc_status === '1'
 
 function doLogin() {
   keycloak.login({
@@ -17,13 +20,28 @@ function doLogin() {
         <img src="@/assets/bluecore-small.png" alt="Bluecore Logo" class="logo" />
         <span class="brand-text"><strong>Marva</strong></span>
       </div>
-      <button class="login-button" @click="doLogin">Log In with Keycloak</button>
+      <div v-if="kcUnavailable" class="error-banner">
+        <strong>Authentication service is unavailable.</strong><br>
+        Please try again later or contact support.
+      </div>
+      <button class="login-button" @click="doLogin" :disabled="kcUnavailable">
+        Log In with Keycloak
+      </button>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-// Assumes SCSS color variables are globally available
+@use "sass:color";
+
+.error-banner {
+  background: #ffdce0;
+  color: #990000;
+  border-radius: 5px;
+  padding: 10px 0;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+}
 
 .login-page {
   background-color: $bluecore-bkgrd;
@@ -73,7 +91,8 @@ function doLogin() {
   cursor: pointer;
 
   &:hover {
-    background-color: darken($orient, 8%);
+    background-color: color.adjust($orient, $lightness: -8%);
+
   }
 }
 </style>
