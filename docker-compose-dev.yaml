@@ -8,4 +8,5 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - KEYCLOAK_AUTH_PATH=http://localhost:8081/keycloak/realms/bluecore
     command: ["npm", "run", "dev-external", "--", "--host"]
