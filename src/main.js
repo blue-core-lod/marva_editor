@@ -15,7 +15,7 @@ import "vue-final-modal/style.css";
 import "floating-vue/dist/style.css";
 
 const base = import.meta.env.BASE_URL;
-const keycloakAuthPath = import.meta.env.VITE_KEYCLOAK_AUTH_PATH; // "http://localhost:8081/keycloak/realms/bluecore"
+const keycloakAuthPath = import.meta.env.VITE_KEYCLOAK_AUTH_PATH + "realms/bluecore "; // "http://localhost:8081/keycloak/realms/bluecore"
 
 function cleanUrl(router) {
     router.afterEach((to) => {
