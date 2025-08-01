@@ -80,11 +80,7 @@ function doLogin() {
 .marva-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 2.5rem 2rem 1.5rem 2rem;
-  font-size: 2rem;
-  font-weight: bold;
-  color: #183b56;
+  padding: 2rem;
 
   .marva-header-logo {
     height: 36px;
@@ -95,7 +91,6 @@ function doLogin() {
     font-size: 2rem;
     font-weight: bold;
     color: #232323;
-    margin-left: 0.5rem;
   }
 }
 
