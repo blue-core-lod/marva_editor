@@ -38,6 +38,7 @@
 
 
 <script>
+  import keycloak from '@/lib/keycloak'
   import { useProfileStore } from '@/stores/profile'
   import { usePreferenceStore } from '@/stores/preference'
   import { useConfigStore } from '@/stores/config'
@@ -58,6 +59,7 @@
   import en from 'javascript-time-ago/locale/en'
   if (TimeAgo.getDefaultLocale() != 'en'){TimeAgo.addDefaultLocale(en)}
   const timeAgo = new TimeAgo('en-US')
+  const base = import.meta.env.BASE_URL;
 
 
 
@@ -696,6 +698,14 @@
         // anything after this point will  be on the right of nav menu
         menu.push({ is: "spacer" })
 
+        menu.push({
+          text: "Logout",
+          icon: "logout",
+          click: () => {
+            const redirectUri = window.location.origin + base
+            keycloak.logout({ redirectUri })
+          }
+        })
 
 
         menu.push(
@@ -732,6 +742,11 @@
     // },
 
     methods: {
+
+      logout() {
+        const redirectUri = window.location.origin + base
+        keycloak.logout({ redirectUri })
+      },
 
       isStaging: function(){
         if (useConfigStore().returnUrls.env == "staging" || useConfigStore().returnUrls.dev == true){

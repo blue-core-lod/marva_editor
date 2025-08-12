@@ -7,17 +7,23 @@ import vue from "@vitejs/plugin-vue";
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-  base: '/bfe2/quartz/',
+  // base: '/bfe2/quartz/', // => LOC Marva Base Path
+  base: '/', // => Bluecore Marva Base Path
   // build: {
   //   sourcemap: true,
   //   minify: false,
-  // },  
+  // },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@use "@/assets/colors.scss" as *;`,
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
       'vue-i18n': 'vue-i18n/dist/vue-i18n.cjs.js',
-
-
     },
   },
   test:{

@@ -13,28 +13,18 @@ import FieldColorsModal from "@/components/panels/edit/modals/FieldColorsModal.v
 import HubStubCreateModal from "@/components/panels/edit/modals/HubStubCreateModal.vue";
 import NacoStubCreateModal from "@/components/panels/edit/modals/NacoStubCreateModal.vue";
 
-
-
-
-
 import ShelfListingModal from "@/components/panels/edit/modals/ShelfListing.vue";
 import AutoDeweyModal from "./components/panels/edit/modals/AutoDeweyModal.vue";
 import UpdateAvailableModal from "@/components/general/UpdateAvailableModal.vue";
 
-
-
 import { useConfigStore } from '@/stores/config'
 import { useProfileStore } from '@/stores/profile'
 import { usePreferenceStore } from '@/stores/preference'
-
-
 import { mapStores, mapState, mapWritableState } from 'pinia'
-
 
 
 export default {
   components: {
-
     LoadingModal,
     PreferenceModal,
     LoginModal,
@@ -49,7 +39,6 @@ export default {
     FieldColorsModal,
     HubStubCreateModal,
     NacoStubCreateModal
-
   },
   data() {
     return {
@@ -77,9 +66,12 @@ export default {
       set() {
         this.preferenceStore.togglePrefModal()
       }
-    }
-
-
+    },
+    // Helper: true if NOT on login page (route name or path)
+    showModals() {
+      // Use name if possible; fallback to path check
+      return this.$route.name !== 'login' && this.$route.path !== '/login';
+    },
   },
 
 
@@ -91,97 +83,66 @@ export default {
 
   async mounted() {
     console.log(this.configStore.versionMajor)
-//     const configStore = useConfigStore()
-// const profileStore = useProfileStore()
 
-    this.preferenceStore.initalize()
-    // this.profileStore.buildProfiles()
-    //window.setTimeout(async ()=>{
+    // Prevent modal and profile logic from running on /login
+    if (this.$route.name === 'login' || this.$route.path === '/login') return;
+
+    this.preferenceStore.initalize();
 
     if (!this.catCode){
       this.showLoginModal = true
     }
-    await this.profileStore.buildProfiles()
-      //let profile =  this.profileStore.loadNewTemplate('Monograph','mattmatt')
-      //this.profileStore.activeProfile = profile
-
-      // console.log('profile',profile)
-
-      // window.setInterval(()=>{
-      //   this.profileStore.activeProfile.rt['lc:RT:bf2:Monograph:Work'].pt['id_loc_gov_ontologies_bibframe_title__title_information']['userValue']['@root'] = this.profileStore.activeProfile.rt['lc:RT:bf2:Monograph:Work'].pt['id_loc_gov_ontologies_bibframe_title__title_information']['userValue']['@root'] + ':)'
-      // },1000)
-
-    //},500)
-
-
-    this.configStore.checkVersionOutOfDate()
-
-
-
+    await this.profileStore.buildProfiles();
+    this.configStore.checkVersionOutOfDate();
   }
 }
-
-
-
-
 </script>
 
 <template>
   <RouterView />
   <LoadingModal/>
-
-  <!-- Prevents it from complaining when loading and not displaying -->
-  <template v-if="showLocalPreferenceModal==true">
-    <PreferenceModal v-model="showLocalPreferenceModal" />
+  <template v-if="showModals">
+    <template v-if="showLocalPreferenceModal==true">
+      <PreferenceModal v-model="showLocalPreferenceModal" />
+    </template>
+    <template v-if="showLoginModal==true">
+      <LoginModal v-model="showLoginModal" />
+    </template>
+    <template v-if="showScriptshifterConfigModal==true">
+      <ScriptshifterConfigModal v-model="showScriptshifterConfigModal" />
+    </template>
+    <template v-if="showDiacriticConfigModal==true">
+      <DiacriticsConfigModal v-model="showDiacriticConfigModal" />
+    </template>
+    <template v-if="showShelfListingModal==true">
+      <ShelfListingModal v-model="showShelfListingModal"  />
+    </template>
+    <template v-if="showUpdateAvailableModal==true && !isTestEnv()"> <!-- Ignore for testing-->
+      <UpdateAvailableModal v-model="showUpdateAvailableModal"  />
+    </template>
+    <template v-if="showTextMacroModal==true">
+      <TextMacroModal v-model="showTextMacroModal"  />
+    </template>
+    <template v-if="showNonLatinBulkModal==true">
+      <NonLatinBulkModal v-model="showNonLatinBulkModal"  />
+    </template>
+    <template v-if="showNonLatinAgentModal==true">
+      <NonLatinAgentModal v-model="showNonLatinAgentModal"  />
+    </template>
+    <template v-if="showFieldColorsModal==true">
+      <FieldColorsModal v-model="showFieldColorsModal"  />
+    </template>
+    <template v-if="showHubStubCreateModal==true">
+      <HubStubCreateModal v-model="showHubStubCreateModal"  />
+    </template>
+    <template v-if="showNacoStubCreateModal==true">
+      <NacoStubCreateModal v-model="showNacoStubCreateModal"  />
+    </template>
+    <template v-if="showAutoDeweyModal==true">
+      <AutoDeweyModal v-model="showAutoDeweyModal"  />
+    </template>
   </template>
-  <template v-if="showLoginModal==true">
-    <LoginModal v-model="showLoginModal" />
-  </template>
-  <template v-if="showScriptshifterConfigModal==true">
-    <ScriptshifterConfigModal v-model="showScriptshifterConfigModal" />
-  </template>
-  <template v-if="showDiacriticConfigModal==true">
-    <DiacriticsConfigModal v-model="showDiacriticConfigModal" />
-  </template>
-
-
-  <template v-if="showShelfListingModal==true">
-    <ShelfListingModal v-model="showShelfListingModal"  />
-  </template>
-  <template v-if="showUpdateAvailableModal==true && !isTestEnv()"> <!-- Ignore for testing-->
-    <UpdateAvailableModal v-model="showUpdateAvailableModal"  />
-  </template>
-  <template v-if="showTextMacroModal==true">
-    <TextMacroModal v-model="showTextMacroModal"  />
-  </template>
-
-  <template v-if="showNonLatinBulkModal==true">
-    <NonLatinBulkModal v-model="showNonLatinBulkModal"  />
-  </template>
-
-  <template v-if="showNonLatinAgentModal==true">
-    <NonLatinAgentModal v-model="showNonLatinAgentModal"  />
-  </template>
-
-  <template v-if="showFieldColorsModal==true">
-    <FieldColorsModal v-model="showFieldColorsModal"  />
-  </template>
-  <template v-if="showHubStubCreateModal==true">
-    <HubStubCreateModal v-model="showHubStubCreateModal"  />
-  </template>
-
-  <template v-if="showNacoStubCreateModal==true">
-    <NacoStubCreateModal v-model="showNacoStubCreateModal"  />
-  </template>
-
-  <template v-if="showAutoDeweyModal==true">
-    <AutoDeweyModal v-model="showAutoDeweyModal"  />
-  </template>
-
 </template>
-
-
-
 
 <style scoped>
 header {
