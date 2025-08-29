@@ -1,5 +1,12 @@
 name: Build and Release Docker Image
 
+# BUILD ON PUSH TO bluecore-main BRANCH
+#on:
+#  push:
+#    branches: [bluecore-main
+#  workflow_dispatch: {}
+
+# Build ON NEW RELEASE PUBLISHED
 on:
   release:
     types: [published]
@@ -15,18 +22,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Log in to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Build and push
+      - name: Build and push :latest
         env:
           IMAGE: ghcr.io/blue-core-lod/marva
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          # Fallback to "latest" if not a release run (e.g., manual)
-          TAG="${RELEASE_TAG:-latest}"
-          SHA_TAG="sha-${GITHUB_SHA::7}"
-
-          docker build -t $IMAGE:$TAG -t $IMAGE:$SHA_TAG .
-
-          docker push $IMAGE:$TAG
-          docker push $IMAGE:$SHA_TAG
+          docker build \
+            --build-arg VITE_KEYCLOAK_AUTH_PATH="http://localhost:8081/keycloak/" \
+            -t $IMAGE:latest \
+            .
+          docker push $IMAGE:latest
