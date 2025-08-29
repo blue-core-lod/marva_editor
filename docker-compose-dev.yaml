@@ -8,6 +8,6 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
-      #- VITE_KEYCLOAK_AUTH_PATH=http://localhost:8081/keycloak/ # Workflows Keycloak path
-      - VITE_KEYCLOAK_AUTH_PATH=http://localhost/keycloak/       # Terraform Keycloak path
+      - VITE_KEYCLOAK_AUTH_PATH=http://localhost:8081/keycloak/ # Workflows Keycloak path
+#      - VITE_KEYCLOAK_AUTH_PATH=http://localhost/keycloak/       # Terraform Keycloak path
     command: ["npm", "run", "dev-external", "--", "--host"]
