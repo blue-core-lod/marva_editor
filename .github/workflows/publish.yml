@@ -3,7 +3,7 @@ name: Build and Release Docker Image
 # BUILD ON PUSH TO bluecore-main BRANCH
 on:
   push:
-    branches: [bluecore-main]
+    branches: [67-publish-docker-image]
   workflow_dispatch: {}
 
 # Build ON NEW RELEASE PUBLISHED
