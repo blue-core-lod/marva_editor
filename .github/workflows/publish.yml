@@ -3,17 +3,30 @@ name: Build and Release Docker Image
 on:
   release:
     types: [published]
+  workflow_dispatch: {}
 
 jobs:
   build_and_publish:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Build and push Docker image
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Build and push
+        env:
+          IMAGE: ghcr.io/blue-core-lod/marva
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-          docker build . --tag ghcr.io/blue-core-lod/marva:latest
-          docker push ghcr.io/blue-core-lod/marva:latest
+          # Fallback to "latest" if not a release run (e.g., manual)
+          TAG="${RELEASE_TAG:-latest}"
+          SHA_TAG="sha-${GITHUB_SHA::7}"
+
+          docker build -t $IMAGE:$TAG -t $IMAGE:$SHA_TAG .
+
+          docker push $IMAGE:$TAG
+          docker push $IMAGE:$SHA_TAG
