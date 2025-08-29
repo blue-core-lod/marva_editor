@@ -5,6 +5,9 @@ FROM node:23 AS builder
 
 WORKDIR /app
 
+ARG VITE_KEYCLOAK_AUTH_PATH
+ENV VITE_KEYCLOAK_AUTH_PATH=${VITE_KEYCLOAK_AUTH_PATH}
+
 # Install dependencies
 COPY package*.json ./
 RUN npm install

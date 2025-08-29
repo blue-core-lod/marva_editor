@@ -27,9 +27,10 @@ jobs:
       - name: Build and push :latest
         env:
           IMAGE: ghcr.io/blue-core-lod/marva
+          KEYCLOAK_URL: http://localhost/keycloak/
+
         run: |
           docker build \
-            --build-arg VITE_KEYCLOAK_AUTH_PATH="http://localhost:8081/keycloak/" \
-            -t $IMAGE:latest \
-            .
+            --build-arg VITE_KEYCLOAK_AUTH_PATH="$KEYCLOAK_URL" \
+            -t $IMAGE:latest .
           docker push $IMAGE:latest
