@@ -357,18 +357,7 @@ export const useConfigStore = defineStore('config', {
       }
 
     }
-
-
-
-
-
-
   },
-
-
-
-
-
 
 
   // xml files stored in the static file directory
@@ -419,11 +408,7 @@ export const useConfigStore = defineStore('config', {
     {lccn:'2026888777',label:"Secondary Instance Test", idUrl:'https://id.loc.gov/resources/instances/2026888777.html', profile:'Monograph',profileId:'lc:RT:bf2:Monograph:Instance'},
 
     {lccn:'2023548475',label:"Create NAR test", idUrl:'https://id.loc.gov/resources/instances/2023548475.html', profile:'Monograph',profileId:'lc:RT:bf2:Monograph:Instance'},
-
-
-
   ],
-
 
 
   lookupConfig: {
@@ -455,11 +440,6 @@ export const useConfigStore = defineStore('config', {
             }
         ]
      },
-    // "http://id.loc.gov/authorities/demographicTerms" : {"name":"demographicTerms", "type":"complex", "modes":[
-    //   {
-    //   'LCDGT All':{"url":"https://id.loc.gov/authorities/demographicTerms/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>", "all":true},
-    //   }
-    // ]},
     "http://id.loc.gov/authorities/genreForms" : {
       "name":"genreForms",
       "type":"complex",
@@ -471,9 +451,7 @@ export const useConfigStore = defineStore('config', {
 
         }
       ]
-
     },
-
     "http://id.loc.gov/authorities/names" : {
       "name":"names",
       "type":"complex",
@@ -489,7 +467,6 @@ export const useConfigStore = defineStore('config', {
         }
       ]
     },
-
     "http://preprod.id.loc.gov/authorities/names" :{
       "name":"names",
       "type":"complex",
@@ -505,15 +482,11 @@ export const useConfigStore = defineStore('config', {
         }
       ]
     },
-
-
     "http://id.loc.gov/authorities/performanceMediums" : {"name":"Works", "processor" : 'lcAuthorities', "type":"complex", "modes":[
       {
       "All":{"url":"http://id.loc.gov/authorities/performanceMediums/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>", "all":true},
       }
     ]},
-
-
     "http://id.loc.gov/authorities/subjects" : {
       "name":"subjects",
       "type":"complex",
@@ -590,17 +563,6 @@ export const useConfigStore = defineStore('config', {
       ]
     },
 
-    // "http://id.loc.gov/authorities/demographicTerms": {
-    //   "name":"demographicTerms",
-    //   "type":"complex",
-    //   "processor" : 'lcAuthorities',
-    //   "modes":[
-    //     {
-    //       'LCDGT All':{"url":"https://preprod-8288.id.loc.gov/authorities/demographicTerms/suggest2/?q=<QUERY>", "all":true},
-    //     }
-    //   ]
-    // },
-
 
     "http://id.loc.gov/entities/providers" : {"name":"providers", "type":"complex", "modes":[]},
     "http://id.loc.gov/entities/relationships" : {"name":"relationships", "processor" : 'lcAuthorities', "type":"complex", "modes":[
@@ -614,6 +576,7 @@ export const useConfigStore = defineStore('config', {
       }
     ]},
 
+
     "https://preprod-8230.id.loc.gov/resources/works" : {"name":"Works", "processor" : 'lcAuthorities', "type":"complex", "modes":[
       {
         "Hubs - Left Anchored":{"url":"https://preprod-8080.id.loc.gov/resources/hubs/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>"},
@@ -622,6 +585,7 @@ export const useConfigStore = defineStore('config', {
         "Works - Keyword":{"url":"https://preprod-8080.id.loc.gov/resources/works/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>&searchtype='keyword'", "all":true},
       }
     ]},
+
 
     "https://preprod-8088.id.loc.gov/resources/works/" : {"name":"Works", "processor" : 'lcAuthorities', "type":"complex", "modes":[
       {
@@ -633,8 +597,6 @@ export const useConfigStore = defineStore('config', {
     ]},
 
 
-
-
     "https://preprod-8295.id.loc.gov/resources/works" : {"name":"Works", "processor" : 'lcAuthorities', "type":"complex", "modes":[
       {
         "Hubs - Left Anchored":{"url":"https://preprod-8295.id.loc.gov/resources/hubs/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>"},
@@ -644,6 +606,7 @@ export const useConfigStore = defineStore('config', {
 
       }
     ]},
+
 
     "https://preprod-8210.id.loc.gov/resources/works/" : {"name":"Works", "processor" : 'lcAuthorities', "type":"complex", "modes":[
       {
@@ -666,27 +629,6 @@ export const useConfigStore = defineStore('config', {
     ]},
 
 
-
-
-
-    // "https://preprod-8080.id.loc.gov/resources/works" : {"name":"Works", "processor" : 'lcAuthorities', "type":"complex", "modes":[
-    //   {
-    //   "Works - Keyword":{"url":"https://preprod-8080.id.loc.gov/resources/works/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>&searchtype=keyword", "all":true},
-    //   "Works - Left Anchored":{"url":"https://preprod-8080.id.loc.gov/resources/works/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>"},
-    //   "Hubs - Keyword":{"url":"https://preprod-8080.id.loc.gov/resources/hubs/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>&searchtype=keyword"},
-    //   "Hubs - Left Anchored":{"url":"https://preprod-8080.id.loc.gov/resources/hubs/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>"},
-    //   }
-    // ]},
-
-    // "https://preprod-8080.id.loc.gov/resources/works/" : {"name":"Works", "processor" : 'lcAuthorities', "type":"complex", "modes":[
-    //   {
-    //   "Works - Keyword":{"url":"https://preprod-8080.id.loc.gov/resources/works/suggest2/?q=?<QUERY>&count=25&offset=<OFFSET>", "all":true},
-    //   "Works - Left Anchored":{"url":"https://preprod-8080.id.loc.gov/resources/works/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>"},
-    //   "Hubs - Keyword":{"url":"https://preprod-8080.id.loc.gov/resources/hubs/suggest2/?q=?<QUERY>&count=25&offset=<OFFSET>"},
-    //   "Hubs - Left Anchored":{"url":"https://preprod-8080.id.loc.gov/resources/hubs/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>"},
-    //   }
-    // ]},
-
     "https://preprod-8080.id.loc.gov/resources/hubs" : {"name":"Works", "processor" : 'lcAuthorities', "type":"complex", "modes":[
       {
         "Hubs - Left Anchored":{"url":"https://preprod-8080.id.loc.gov/resources/hubs/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>"},
@@ -707,8 +649,6 @@ export const useConfigStore = defineStore('config', {
         "Hubs - Keyword":{"url":"https://preprod-8080.id.loc.gov/resources/hubs/suggest2/?q=?<QUERY>&count=25&offset=<OFFSET>","all":true},
       }
     ]},
-
-
 
 
     "https://preprod-8080.id.loc.gov/resources/hubs" : {"name":"Hubs", "processor" : 'lcAuthorities', "type":"complex", "modes":[
@@ -1090,48 +1030,59 @@ export const useConfigStore = defineStore('config', {
         "code": "ypk-Cyrl"
     }
   }
-
-
   }),
+
   getters: {
+      /**
+       * Returns the part of the config based on the current URL (or enviornment)
+       * @return {object} - The url config object
+       */
+      returnUrls: (state) => {
+          // testing for window here because of running unit tests in node
+          if (typeof window !== 'undefined'){
+              console.log("window: ", window.location.href)
+              if (window && (window.location.href.includes('localhost/marva/') ||window.location.href.includes('https://dev.bcld.info/marva/') && window.location.href.startsWith('http://localhost') )) {
+                  console.log(">>>>>>>includes('localhost/marva/)<<<<<<<<<")
+                  return state.regionUrls.externalDev
 
-    /**
-    * Returns the part of the config based on the current URL (or enviornment)
-    * @return {object} - The url config object
-    */
-    returnUrls: (state) => {
-      // testing for window here because of running unit tests in node
-      if (typeof window !== 'undefined'){
-        console.log("window: ", window.location.href)
-        if (window && (!window.location.href.includes('localhost:5555') && !window.location.href.includes('localhost:4444') && window.location.href.startsWith('http://localhost') || window.location.href.startsWith('http://127.0.0.1') )){
-          return state.regionUrls.dev
-        }else if (window && window.location.href.startsWith('https://preprod-3001')){
-          return state.regionUrls.staging
-        }else if (window && window.location.href.startsWith('https://editor.id')){
-          return state.regionUrls.production
-        }else if (window && window.location.href.includes('bibframe.org')){
-          return state.regionUrls.bibframeDotOrg
-        }else if (window && window.location.href.includes('localhost:4444')){
-          return state.regionUrls.externalDev
-        }else if (window && window.location.href.includes('localhost:5555')){
-          console.log(">>>>>>>playwrightTestConfig<<<<<<<<<")
-          return state.regionUrls.playwrightTestConfig
-        }else{
-          return state.regionUrls.dev
-        }
-      }else{
+              }else if (window && (!window.location.href.includes('localhost:5555') && !window.location.href.includes('localhost:4444') && window.location.href.startsWith('http://localhost') || window.location.href.startsWith('http://127.0.0.1') )){
+                  console.log(">>>>>>>!window.location.href.includes('localhost:5555')<<<<<<<<<")
+                  return state.regionUrls.dev
 
-        // if it gets here it means it is running uint tests probably,
-        // so return the playwrightTestConfig since it has the urls setup for external testing
-        return state.regionUrls.playwrightTestConfig
+              }else if (window && window.location.href.startsWith('https://preprod-3001')){
+                  console.log(">>>>>>>startsWith('https://preprod-3001')<<<<<<<<<")
+                  return state.regionUrls.staging
+
+              }else if (window && window.location.href.startsWith('https://editor.id')){
+                  console.log(">>>>>>>startsWith('https://editor.id')<<<<<<<<<")
+                  return state.regionUrls.production
+
+              }else if (window && window.location.href.includes('bibframe.org')){
+                  console.log(">>>>>>>includes('bibframe.org')<<<<<<<<<")
+                  return state.regionUrls.bibframeDotOrg
+
+              }else if (window && window.location.href.includes('localhost:4444')){
+                  console.log(">>>>>>>includes('localhost:4444')<<<<<<<<<")
+                  return state.regionUrls.externalDev
+
+              }else if (window && window.location.href.includes('localhost:5555')){
+                  console.log(">>>>>>>playwrightTestConfig<<<<<<<<<")
+                  return state.regionUrls.playwrightTestConfig
+
+              }else{
+                  return state.regionUrls.dev
+              }
+          }else{
+              console.log(">>>>>>>return state.regionUrls.playwrightTestConfig<<<<<<<<<")
+
+              // if it gets here it means it is running uint tests probably,
+              // so return the playwrightTestConfig since it has the urls setup for external testing
+              return state.regionUrls.playwrightTestConfig
+          }
       }
-    }
-
-
-
   },
-  actions: {
 
+  actions: {
     /**
     * Take a url and rewrites it to match the url pattern of the current enviornment
     * @param {string} url - the url to modfidfy
@@ -1151,13 +1102,8 @@ export const useConfigStore = defineStore('config', {
     * @return {void} -
     */
     async getScriptShifterLanguages() {
-
       let req = await fetch(this.returnUrls.scriptshifter + 'languages')
       this.scriptshifterLanguages = await req.json()
-
-
-
-
     },
 
     /**
@@ -1166,19 +1112,10 @@ export const useConfigStore = defineStore('config', {
     * @return {void} -
     */
     async checkVersionOutOfDate() {
-
-
       if (await utilsNetwork.checkVersionOutOfDate()){
         this.showUpdateAvailableModal = true
       }
-
     },
-
-
-
-
-
-
 
   },
 })
