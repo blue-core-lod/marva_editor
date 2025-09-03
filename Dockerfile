@@ -6,7 +6,7 @@ FROM node:23 AS builder
 WORKDIR /app
 
 ARG KC_HOSTNAME
-ENV VITE_KEYCLOAK_AUTH_PATH=${KC_HOSTNAME:-http://localhost/keycloak/}
+ENV VITE_KEYCLOAK_AUTH_PATH=${KC_HOSTNAME}
 
 # Install dependencies
 COPY package*.json ./
