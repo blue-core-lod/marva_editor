@@ -8,7 +8,7 @@ import vue from "@vitejs/plugin-vue";
 export default defineConfig({
   plugins: [vue()],
   // base: '/bfe2/quartz/', // => LOC Marva Base Path
-  base: '/', // => Bluecore Marva Base Path
+  base: '/marva/', // => Bluecore Marva Base Path
   // build: {
   //   sourcemap: true,
   //   minify: false,

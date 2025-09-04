@@ -1,13 +1,13 @@
 services:
   marva-quartz:
-    build: .
+    image: node:23
+    working_dir: /app
     ports:
       - "4444:4444"
     volumes:
       - .:/app
       - /app/node_modules
     environment:
-      - NODE_ENV=development
-      #- VITE_KEYCLOAK_AUTH_PATH=http://localhost:8081/keycloak/ # Workflows Keycloak path
-      - VITE_KEYCLOAK_AUTH_PATH=http://localhost/keycloak/       # Terraform Keycloak path
-    command: ["npm", "run", "dev-external", "--", "--host"]
+      NODE_ENV: development
+      VITE_KEYCLOAK_AUTH_PATH: "http://localhost:8081/keycloak/"
+    command: sh -lc "npm install && npm run dev-external -- --host"
