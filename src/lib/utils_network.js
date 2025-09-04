@@ -1,3 +1,4 @@
+import blueCoreNetwork from "./local/bluecore_network";
 import {useConfigStore} from "../stores/config";
 import {usePreferenceStore} from "../stores/preference";
 
@@ -311,6 +312,7 @@ const utilsNetwork = {
       if (json){
         options = {headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}, mode: "cors", signal: signal}
       }
+      options = await blueCoreNetwork.blueCoreOptions(url, options)
       // console.log("url:",url)
       // console.log('options:',options)
       try{
