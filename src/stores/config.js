@@ -79,7 +79,7 @@ export const useConfigStore = defineStore('config', {
         util  : 'http://localhost:3000/util/',                //TODO: Needs to be implemented
         utilLang: 'http://localhost:3000/util-lang/',         //TODO: Needs to be implemented
         scriptshifter: 'http://localhost:3000/scriptshifter/',//TODO: Needs to be implemented
-        publish : 'http://localhost:3000/api/batches/',
+        publish : 'http://localhost:3000/batches/upload/',
         validate: 'http://localhost:5200/validate/stage',
         profiles: 'https://raw.githubusercontent.com/lcnetdev/bfe-profiles/main/profile-stage/data.json',
         starting: 'https://raw.githubusercontent.com/lcnetdev/bfe-profiles/main/starting-stage/data.json',
