@@ -2717,6 +2717,9 @@ const utilsNetwork = {
 
     publish: async function (xml, eid, activeProfile) {
         let postingHub = false
+        console.log("🚧 xml: ", xml)
+        console.log("🚧 eid: ", eid)
+        console.log("🚧 activeProfile: ", activeProfile)
 
         // check if we are posting a HUB if so set that flag
         // activeProfile is not required but if it is check
@@ -2728,6 +2731,10 @@ const utilsNetwork = {
 
         let url = useConfigStore().returnUrls.publish
         let uuid = translator.toUUID(translator.new())
+        console.log("🚧 url: ", url)
+        console.log("🚧 uuid: ", uuid)
+        console.log("🚧 JSON.stringify: ", JSON.stringify({name: uuid, rdfxml: xml, eid: eid, hub: postingHub}))
+
         const rawResponse = await fetch(url, {
             method: 'POST',
             headers: {
@@ -2737,6 +2744,7 @@ const utilsNetwork = {
             body: JSON.stringify({name: uuid, rdfxml: xml, eid: eid, hub: postingHub})
         });
         const content = await rawResponse.json();
+        console.log("🚧 content: ", content)
 
         if (content && content.publish && content.publish.status && content.publish.status == 'published') {
             return {status: true, postLocation: (content.postLocation) ? content.postLocation : null}
