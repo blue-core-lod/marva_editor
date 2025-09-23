@@ -310,18 +310,62 @@ const utilsExport = {
         let parser = returnDOMParser()
         let results = null
 
+        console.log("🚀 instanceURI: ", instanceURI)
+        console.log("🚀 profile: ", profile)
+        console.log("🚀 tleLookup: ", tleLookup)
+        console.log("🚀 parser: ", parser)
+
         for (let rt in profile.rt) {
             if (profile.rt[rt].instanceOf && profile.rt[rt].URI == instanceURI) {
-                results = (new XMLSerializer()).serializeToString(tleLookup['Work'][profile.rt[rt].instanceOf])
-                results = parser.parseFromString(results, "text/xml").children[0]
+                const targetInstanceOf = profile.rt[rt].instanceOf
+                const directNode = tleLookup?.Work?.[targetInstanceOf]
+                console.log("⚠️ targetInstanceOf: ", targetInstanceOf)
+                console.log("⚠️ directNode: ", directNode)
+
+                // If we actually have the node, use it
+                if (directNode && typeof directNode.nodeType === 'number') {
+                    const serializedResults = (new XMLSerializer()).serializeToString(directNode)
+                    results = parser.parseFromString(serializedResults, "text/xml").children[0]
+                    break
+                }
+
+                // Otherwise, try to find a local Work whose bf:derivedFrom matches the LoC work URI
+                for (let wUri in (tleLookup?.Work || {})) {
+                    const workEl = tleLookup.Work[wUri]
+                    console.log("⚠️ workEl: ", workEl)
+
+                    // Guard: ensure it's a real element
+                    if (!workEl || typeof workEl.getElementsByTagName !== 'function') continue
+                    const derived = workEl.getElementsByTagName('bf:derivedFrom')
+                    console.log("⚠️ derived: ", derived)
+
+                    if (derived.length > 0) {
+                        // Check rdf:resource attr for match
+                        const resource = derived[0].getAttribute('rdf:resource')
+                        console.log("⚠️ resource: ", resource)
+
+                        if (resource === targetInstanceOf) {
+                            const serializedResults = (new XMLSerializer()).serializeToString(workEl)
+                            results = parser.parseFromString(serializedResults, "text/xml").children[0]
+                            break
+                        }
+                    }
+                }
+                // We found a match above; stop scanning profile.rt
+                if (results) break
             }
         }
-
-        // if that didnt work just pick the first work
+        // Fallback: just pick the first available Work
         if (!results) {
-            for (let wUri in tleLookup['Work']) {
-                results = tleLookup['Work'][wUri]
-                break
+            for (let wUri in (tleLookup?.Work || {})) {
+                const workEl = tleLookup.Work[wUri]
+                console.log("⚠️ workEl: ", workEl)
+
+                if (workEl && typeof workEl.nodeType === 'number') {
+                    const serializedResults = (new XMLSerializer()).serializeToString(workEl)
+                    results = parser.parseFromString(serializedResults, "text/xml").children[0]
+                    break
+                }
             }
         }
         return results
