@@ -156,7 +156,6 @@ const utilsExport = {
             }
             return bnode
         }
-
     },
 
     /**
@@ -168,7 +167,6 @@ const utilsExport = {
      */
     createLiteral: function (property, userValue) {
         let p = this.createElByBestNS(property)
-
 
         // it should be stored under the same key
         if (userValue[property] && property != "http://id.loc.gov/ontologies/bibframe/electronicLocator") {
