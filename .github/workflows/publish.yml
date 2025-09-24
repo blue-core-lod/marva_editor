@@ -27,5 +27,6 @@ jobs:
         run: |
           docker build \
             --build-arg VITE_KEYCLOAK_AUTH_PATH="${{ secrets.MARVA_KEYCLOAK_PATH }}" \
+            --build-arg VITE_BLUECORE_API_PATH="${{ secrets.MARVA_BLUECORE_API_PATH }}" \
             -t $IMAGE:latest .
           docker push $IMAGE:latest

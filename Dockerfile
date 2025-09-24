@@ -9,6 +9,9 @@ WORKDIR /app
 ARG VITE_KEYCLOAK_AUTH_PATH
 ENV VITE_KEYCLOAK_AUTH_PATH=${VITE_KEYCLOAK_AUTH_PATH:-http://localhost/keycloak/}
 
+ARG VITE_BLUECORE_API_PATH
+ENV VITE_BLUECORE_API_PATH=${VITE_BLUECORE_API_PATH:-http://localhost/api/}
+
 # Install dependencies
 COPY package*.json ./
 RUN npm install
