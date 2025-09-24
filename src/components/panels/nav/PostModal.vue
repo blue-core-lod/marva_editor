@@ -1,61 +1,129 @@
 <script>
 import {useProfileStore} from '@/stores/profile'
 import {useConfigStore} from '@/stores/config'
-
-
-import {mapStores, mapState, mapWritableState} from 'pinia'
+import {mapStores, mapWritableState} from 'pinia'
 import {VueFinalModal} from 'vue-final-modal'
 import VueDragResize from 'vue3-drag-resize'
 
-
 export default {
-  components: {
-    VueFinalModal,
-    VueDragResize,
-  },
+  components: {VueFinalModal, VueDragResize},
+
   data() {
     return {
       width: 0,
       height: 0,
       top: 100,
       left: 0,
-      postResults: {},
+      postResults: null,   // null until first attempt
       posting: false,
-      initalHeight: 400,
+      showDetails: false,
+      showDebug: true,     // <-- quick toggle; set to false to hide by default
+      initalHeight: 550,
       initalLeft: (window.innerWidth / 2) - 450,
+      _lastRawResponse: null, // for debug panel
     }
   },
+
   computed: {
-    // gives access to this.counterStore and this.userStore
     ...mapStores(useProfileStore, useConfigStore),
-    // ...mapState(useProfileStore, ['activeProfilePosted']),
-    // ...mapState(usePreferenceStore, ['debugModalData']),
-    ...mapWritableState(useProfileStore, ['showPostModal', 'activeProfilePosted', 'activeProfilePostedTimestamp', 'activeProfile']),
+    ...mapWritableState(useProfileStore, [
+      'showPostModal',
+      'activeProfilePosted',
+      'activeProfilePostedTimestamp',
+      'activeProfile',
+    ]),
+    // helpful flags for template & logging
+    hasResult() {
+      return !!this.postResults && Object.keys(this.postResults).length > 0
+    },
+    isSuccess() {
+      return !!this.postResults && this.postResults.status === true
+    },
+    isError() {
+      return !!this.postResults && this.postResults.status === false
+    },
   },
+
+  watch: {
+    postResults: {
+      deep: true,
+      handler(n) {
+        // Debug when normalized result changes
+        console.groupCollapsed('%c[PostModal] postResults changed', 'color:#2563eb')
+        console.log('normalized:', n)
+        console.log('isSuccess:', this.isSuccess, 'isError:', this.isError, 'hasResult:', this.hasResult)
+        console.groupEnd()
+      }
+    }
+  },
+
   methods: {
-    done: function () {
+    done() {
       this.showPostModal = false
     },
-    dragResize: function (newRect) {
+
+    dragResize(newRect) {
       this.width = newRect.width
       this.height = newRect.height
       this.top = newRect.top
       this.left = newRect.left
-      this.$refs.errorHolder.style.height = newRect.height + 'px'
+      if (this.$refs.modalBody) this.$refs.modalBody.style.height = newRect.height + 'px'
     },
-    post: async function () {
+
+    async post() {
       const config = useConfigStore()
+
       if (!config.returnUrls.displayLCOnlyFeatures) {
         this.showPostModal = false
-        alert("Sorry you cannot post in this Marva environment")
+        alert('Sorry you cannot post in this Marva environment')
         return false
       }
-      this.$refs.errorHolder.style.height = this.initalHeight + 'px'
+
+      if (this.$refs.modalBody) this.$refs.modalBody.style.height = this.initalHeight + 'px'
+
       this.posting = true
-      this.postResults = {}
-      this.postResults = await this.profileStore.publishRecord()
-      this.posting = false
-      if (this.postResults.status !== false) {
+      this.postResults = null
+      this._lastRawResponse = null
+      this.showDetails = false
+
+      try {
+        const raw = await this.profileStore.publishRecord()
+        this._lastRawResponse = raw
+
+        console.groupCollapsed('%c[PostModal] raw publishRecord() response', 'color:#16a34a')
+        console.log(raw)
+        console.groupEnd()
+
+        const normalized = this.normalizePostResults(raw)
+        console.groupCollapsed('%c[PostModal] normalized result', 'color:#16a34a')
+        console.log(normalized)
+        console.groupEnd()
+
+        this.postResults = normalized
+      } catch (e) {
+        console.groupCollapsed('%c[PostModal] publish error caught', 'color:#dc2626')
+        console.error(e)
+        console.groupEnd()
+
+        this.postResults = {
+          status: false,
+          postLocation: null,
+          msg: e?.message || e || 'Unknown error',
+          resourceLinks: [],
+          raw: e,
+        }
+      } finally {
+        this.posting = false
+      }
+
+      // log final decision flags
+      console.groupCollapsed('%c[PostModal] status flags', 'color:#2563eb')
+      console.log('isSuccess:', this.isSuccess)
+      console.log('isError:', this.isError)
+      console.log('hasResult:', this.hasResult)
+      console.groupEnd()
+
+      if (this.isSuccess) {
         this.activeProfilePosted = true
         this.activeProfilePostedTimestamp = Date.now()
       } else {
@@ -63,52 +131,99 @@ export default {
         this.activeProfilePostedTimestamp = false
       }
     },
-    onSelectElement(event) {
-      const tagName = event.target.tagName
-      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {
-        event.stopPropagation()
-      }
-    },
-    copyErrorToClipboard: function () {
-      var text = this.cleanUpErrorResponse(this.postResults.msg)
-      navigator.clipboard.writeText(text).then(function () {
-        console.log('Async: Copying to clipboard was successful!');
-      }, function (err) {
-        console.error('Async: Could not copy text: ', err);
-      });
-    },
 
+    normalizePostResults(res) {
+      const obj = (res && typeof res === 'object') ? res : {}
 
-    /**
-     * Helper to make the XML preview display nicer
-     * @return {string} - the cleaned up string
-     */
-    cleanUpErrorResponse: function (msg) {
-      console.log("✅ MSG: ", msg)
-      msg = JSON.stringify(msg, null, 2)
-      msg = msg.replace(/\\n|\\t/g, '').replace(/\\"/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-      return msg
-    },
-
-    getLcapUrl: function () {
-      let base = useConfigStore().returnUrls.lcap //"https://c2vwscf01.loc.gov/cflsops/toolkit-training-lcsg/lcap-productivity/marva/bibId/"
-      let bibId = null
-      for (let rt in this.activeProfile.rt) {
-        let type = rt.split(':').slice(-1)[0]
-        let url = this.activeProfile.rt[rt].URI
-        if (type == 'Instance') {
-          bibId = url.split("/")[url.split('/').length - 1]
+      // New minimal API (after FastAPI model trimming)
+      if ('uri' in obj && 'workflow_id' in obj) {
+        return {
+          status: true,
+          postLocation: obj.postLocation || obj.uri || null,
+          resourceLinks: Array.isArray(obj.resourceLinks) ? obj.resourceLinks : [],
+          raw: obj,
         }
       }
-      return base + bibId
+
+      // Legacy server shape
+      if (obj.publish && obj.publish.status === 'published') {
+        return {
+          status: true,
+          postLocation: obj.postLocation || obj.uri || null,
+          resourceLinks: Array.isArray(obj.resourceLinks) ? obj.resourceLinks : [],
+          raw: obj,
+        }
+      }
+
+      // Legacy client wrapper
+      if (typeof obj.status === 'boolean') {
+        return {
+          status: obj.status,
+          postLocation: obj.postLocation || obj.uri || null,
+          msg: obj.msg ?? '',
+          resourceLinks: Array.isArray(obj.resourceLinks) ? obj.resourceLinks : [],
+          raw: obj,
+        }
+      }
+
+      // Fallback -> error
+      return {
+        status: false,
+        postLocation: obj.postLocation || obj.uri || null,
+        msg: obj || 'Unexpected response',
+        resourceLinks: [],
+        raw: obj,
+      }
+    },
+
+    copyErrorToClipboard() {
+      const text = this.formatMsg(this.postResults?.msg)
+      navigator.clipboard.writeText(text).catch(() => {
+      })
+    },
+
+    copyLocation() {
+      const loc = this.postResults?.postLocation || ''
+      if (!loc) return
+      navigator.clipboard.writeText(loc).catch(() => {
+      })
+    },
+
+    formatMsg(msg) {
+      if (msg == null) return ''
+      if (typeof msg !== 'string') {
+        try {
+          return JSON.stringify(msg, null, 2)
+        } catch {
+          return String(msg)
+        }
+      }
+      try {
+        return JSON.stringify(JSON.parse(msg), null, 2)
+      } catch {
+      }
+      return msg
+          .replace(/\\n|\\t/g, '')
+          .replace(/\\"/g, '"')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+    },
+
+    getLcapUrl() {
+      const base = useConfigStore().returnUrls.lcap
+      let bibId = null
+      for (const rt in this.activeProfile.rt) {
+        const type = rt.split(':').slice(-1)[0]
+        const url = this.activeProfile.rt[rt].URI
+        if (type === 'Instance') {
+          const parts = url.split('/')
+          bibId = parts[parts.length - 1]
+        }
+      }
+      return base + (bibId ?? '')
     },
   },
-
-  mounted() {
-  }
 }
-
-
 </script>
 
 <template>
@@ -124,114 +239,277 @@ export default {
         :w="900"
         :h="initalHeight"
         :x="initalLeft"
-        class="login-modal"
+        class="login-modal modern-box"
         @resizing="dragResize"
         @dragging="dragResize"
         :sticks="['br']"
         :stickSize="22"
     >
-      <div id="error-holder" ref="errorHolder" @mousedown="onSelectElement($event)"
-           @touchstart="onSelectElement($event)">
-        <h1 v-if="posting">Posting please wait...</h1>
-        <div v-if="posting == false && Object.keys(postResults).length != 0 && postResults.status === false">
-          <h2>There was an error posting. Please report error. </h2>
-          <button @click="copyErrorToClipboard">Copy error to clipboard</button>
-          <button @click="done">Close</button>
-          <div>
-            <code v-if="postResults.status === false">
-              {{ cleanUpErrorResponse(postResults.msg) }}
-            </code>
+      <div id="modal-body" ref="modalBody" @mousedown.stop @touchstart.stop>
+        <!-- header -->
+        <div class="header">
+          <div class="title">Post to Bluecore</div>
+          <div class="header-actions">
+            <label class="debug-toggle">
+              <input type="checkbox" v-model="showDebug"/>
+              <span>Debug</span>
+            </label>
+            <button class="close-btn" @click="done">✕</button>
           </div>
         </div>
 
-        <div v-if="posting == false && Object.keys(postResults).length != 0">
-          <div v-if="postResults.resourceLinks.length>0" style="margin: 0.5em 0 0.5em 0;background-color: #90ee9052;padding: 0.5em;border-radius: 0.25em;">
-            The record was accepted by the system. To view the record follow these links:
-            <div v-for="rl in postResults.resourceLinks" v-bind:key="rl.url">
-              <a :href="rl.url+'?blastdacache=' + Date.now()" target="_blank">View {{ rl.type }} on {{ rl.env }}</a>
+        <!-- loading -->
+        <div v-if="posting" class="panel center">
+          <div class="spinner"></div>
+          <div class="panel-title">Posting… please wait</div>
+        </div>
+
+        <!-- success -->
+        <div v-else-if="isSuccess" class="panel success">
+          <div class="icon">✅</div>
+          <div class="panel-title">Marva Posted to Bluecore Successfully</div>
+
+          <div class="meta">
+            <div v-if="postResults.raw?.workflow_id">
+              <strong>Workflow ID:</strong> <code>{{ postResults.raw.workflow_id }}</code>
             </div>
-            <div>
-              <a :href="getLcapUrl()" target="_blank">Open in LCAP</a>
+            <div v-if="postResults.postLocation">
+              <strong>Location:</strong> <code>{{ postResults.postLocation }}</code>
+              <button class="btn ghost" @click="copyLocation">Copy</button>
             </div>
           </div>
+
+          <div
+              v-if="postResults.resourceLinks && postResults.resourceLinks.length"
+              class="links"
+          >
+            <div class="links-title">View record:</div>
+            <div class="link-list">
+              <div v-for="rl in postResults.resourceLinks" :key="rl.url || rl">
+                <a :href="(rl.url || rl)" target="_blank">
+                  {{ rl.type ? `View ${rl.type}` : 'Open link' }} <span v-if="rl.env"></span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <!--            <a class="btn primary" :href="getLcapUrl()" target="_blank">Open in LCAP</a>-->
+            <button class="btn" @click="showDetails = !showDetails">
+              {{ showDetails ? 'Hide' : 'Show' }} details
+            </button>
+            <button class="btn" @click="done">Close</button>
+          </div>
+
+          <pre v-if="showDetails" class="details">{{ formatMsg(postResults.raw) }}</pre>
         </div>
-        <button @click="done">Close</button>
+
+        <!-- error -->
+        <div v-else-if="isError" class="panel error">
+          <div class="icon">⚠️</div>
+          <div class="panel-title">There was an error posting</div>
+          <pre class="details">{{ formatMsg(postResults.msg) }}</pre>
+          <div class="actions">
+            <button class="btn" @click="copyErrorToClipboard">Copy error</button>
+            <button class="btn" @click="done">Close</button>
+          </div>
+        </div>
+
+        <!-- idle / default -->
+        <div v-else class="panel center">
+          <div class="panel-title">Ready to publish</div>
+          <div class="actions">
+            <button class="btn primary" @click="post">Publish now</button>
+            <button class="btn" @click="done">Close</button>
+          </div>
+        </div>
+
+        <!-- DEBUG BLOCK -->
+        <div v-if="showDebug" class="panel debug">
+          <div class="panel-title">Debug</div>
+          <div class="kv"><b>hasResult:</b> <code>{{ hasResult }}</code></div>
+          <div class="kv"><b>isSuccess:</b> <code>{{ isSuccess }}</code></div>
+          <div class="kv"><b>isError:</b> <code>{{ isError }}</code></div>
+          <div class="kv"><b>postLocation:</b> <code>{{ postResults?.postLocation }}</code></div>
+          <div class="kv"><b>workflow_id (raw):</b> <code>{{ postResults?.raw?.workflow_id }}</code></div>
+          <div class="kv"><b>last raw response:</b></div>
+          <pre class="details">{{ formatMsg(_lastRawResponse) }}</pre>
+          <div class="kv"><b>normalized:</b></div>
+          <pre class="details">{{ formatMsg(postResults) }}</pre>
+        </div>
       </div>
     </VueDragResize>
   </VueFinalModal>
 </template>
+
 <style scoped>
-
-#error-holder {
-  overflow-y: scroll;
-}
-
-.checkbox-option {
-  width: 20px;
-  height: 20px;
-}
-
-.option {
-  display: flex;
-}
-
-.option-title {
-  flex: 2;
-}
-
-.option-title-header {
-  font-weight: bold;
-}
-
-.option-title-desc {
-  font-size: 0.8em;
-  color: gray;
-}
-
-#debug-content {
-  overflow: hidden;
+#modal-body {
   overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.menu-buttons {
-  margin-bottom: 2em;
-  position: relative;
+.modern-box {
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -2px rgba(0, 0, 0, .05);
 }
 
-.close-button {
-  position: absolute;
-  right: 5px;
-  top: 5px;
-  background-color: white;
-  border-radius: 5px;
-  border: solid 1px black;
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.close-btn {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
   cursor: pointer;
 }
 
-.login-modal {
-  background-color: white;
-  -webkit-box-shadow: 0px 10px 13px -7px #000000, 5px 5px 15px 5px rgba(0, 0, 0, 0.27);
-  box-shadow: 0px 10px 13px -7px #000000, 5px 5px 15px 5px rgba(0, 0, 0, 0.27);
-  border-radius: 1em;
-  padding: 1em;
-  border: solid 1px black;
+.panel {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 16px;
 }
 
-div {
-  /* margin-top: 2em; */
+.panel.center {
+  text-align: center;
 }
 
-input {
-  font-size: 1.5em;
-  margin-top: 0.5em;
-
+.panel.success {
+  border-color: #def7ec;
+  background: #f0fdf4;
 }
 
-strong {
-  font-weight: bold
+.panel.error {
+  border-color: #fde2e1;
+  background: #fff5f5;
 }
 
-button {
-  font-size: 1.5em;
+.panel.debug {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+}
+
+.panel-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.meta {
+  margin: 8px 0 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.links-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.link-list a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.link-list a:hover {
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.btn {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px dashed #cbd5e1;
+  color: #111827;
+}
+
+.debug-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+code {
+  background: #f7fafc;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.details {
+  background: #0b1220;
+  color: #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  overflow: auto;
+  max-height: 240px;
+  margin-top: 8px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid #e5e7eb;
+  border-top-color: #111827;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.kv {
+  margin: 4px 0;
 }
 </style>

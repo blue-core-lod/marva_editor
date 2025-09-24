@@ -2714,47 +2714,90 @@ const utilsNetwork = {
      * @param {obj} activeProfile - the activeProfile we're posting
      * @return {obj} - {status:false, msg: ""}
      */
-
     publish: async function (xml, eid, activeProfile) {
-        let postingHub = false
-        console.log("🚧 xml: ", xml)
-        console.log("🚧 eid: ", eid)
-        console.log("🚧 activeProfile: ", activeProfile)
+        let postingHub = false;
+        console.log("🚧 xml: ", xml);
+        console.log("🚧 eid: ", eid);
+        console.log("🚧 activeProfile: ", activeProfile);
 
-        // check if we are posting a HUB if so set that flag
-        // activeProfile is not required but if it is check
-        if (activeProfile) {
-            if (activeProfile.id && activeProfile.id === 'Hub') {
-                postingHub = true
-            }
-        }
+        // hub flag
+        if (activeProfile && activeProfile.id === 'Hub') {postingHub = true;}
 
-        let url = useConfigStore().returnUrls.publish
-        let uuid = translator.toUUID(translator.new())
-        console.log("🚧 url: ", url)
-        console.log("🚧 uuid: ", uuid)
-        console.log("🚧 JSON.stringify: ", JSON.stringify({name: uuid, rdfxml: xml, eid: eid, hub: postingHub}))
+        const url = useConfigStore().returnUrls.publish;
+        const uuid = translator.toUUID(translator.new());
+        console.log("🚧 url: ", url);
+        console.log("🚧 uuid: ", uuid);
 
+        const bodyPayload = { name: uuid, rdfxml: xml, eid: eid, hub: postingHub };
+        console.log("🚧 JSON.stringify: ", JSON.stringify(bodyPayload));
+
+        // request/response debug
         const rawResponse = await fetch(url, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({name: uuid, rdfxml: xml, eid: eid, hub: postingHub})
+            body: JSON.stringify(bodyPayload)
         });
-        const content = await rawResponse.json();
-        console.log("🚧 content: ", content)
 
-        if (content && content.publish && content.publish.status && content.publish.status == 'published') {
-            return {status: true, postLocation: (content.postLocation) ? content.postLocation : null}
-        } else {
-            return {
-                status: false,
-                postLocation: (content.postLocation) ? content.postLocation : null,
-                msg: JSON.stringify(content.publish, null, 2)
-            }
+        console.log("🚧 rawResponse.ok: ", rawResponse.ok);
+        console.log("🚧 rawResponse.status: ", rawResponse.status);
+        console.log("🚧 rawResponse.headers: ", [...rawResponse.headers.entries()]);
+
+        const content = await rawResponse.json().catch((e) => {
+            console.error("❌ Failed to parse JSON response:", e);
+            return null;
+        });
+        console.log("🚧 content: ", content);
+
+        // --------- Success shape #1: NEW API { uri, workflow_id, [postLocation], [resourceLinks] } ---------
+        if (content && content.uri && content.workflow_id) {
+            console.log("✅ NEW success shape detected (uri/workflow_id).");
+            const result = {
+                status: true,
+                postLocation: content.postLocation || content.uri || null,
+                resourceLinks: Array.isArray(content.resourceLinks) ? content.resourceLinks : []
+            };
+            console.log("✅ returning: ", result);
+            return result;
         }
+
+        // --------- Success shape #2: LEGACY server { publish: { status: 'published' }, ... }  ---------
+        if (content && content.publish && content.publish.status === 'published') {
+            console.log("✅ LEGACY success shape detected (publish.status === 'published').");
+            const result = {
+                status: true,
+                postLocation: content.postLocation || content.uri || null,
+                resourceLinks: Array.isArray(content.resourceLinks) ? content.resourceLinks : []
+            };
+            console.log("✅ returning: ", result);
+            return result;
+        }
+
+        // --------- Passthrough shape: already { status, postLocation, msg?, resourceLinks? }  ---------
+        if (content && typeof content.status === 'boolean') {
+            console.log("ℹ️ Passthrough status shape detected.");
+            const result = {
+                status: content.status,
+                postLocation: content.postLocation || content.uri || null,
+                msg: content.msg ?? '',
+                resourceLinks: Array.isArray(content.resourceLinks) ? content.resourceLinks : []
+            };
+            console.log("↩️ returning: ", result);
+            return result;
+        }
+
+        // --------- Fallback error ---------
+        console.warn("⚠️ Unrecognized response shape. Treating as error.");
+        const fallback = {
+            status: false,
+            postLocation: content?.postLocation || content?.uri || null,
+            msg: content?.publish ? JSON.stringify(content.publish, null, 2) : JSON.stringify(content, null, 2),
+            resourceLinks: []
+        };
+        console.log("↩️ returning fallback: ", fallback);
+        return fallback;
     },
 
 
