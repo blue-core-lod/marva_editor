@@ -4,6 +4,7 @@ services:
       context: .
       args:
         VITE_KEYCLOAK_AUTH_PATH: "http://localhost:8081/keycloak/"
+        VITE_BLUECORE_API_PATH: "http://localhost/api/"
     ports:
       - "8080:8080"
     environment:

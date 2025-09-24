@@ -244,8 +244,8 @@
 <style>
 
   .content-container{
-
-    background-color: white;
+    background-color: #e2e8ed;
+    padding: 14px;
   }
 
 </style>

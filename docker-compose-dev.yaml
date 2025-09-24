@@ -10,4 +10,5 @@ services:
     environment:
       NODE_ENV: development
       VITE_KEYCLOAK_AUTH_PATH: "http://localhost:8081/keycloak/"
+      VITE_BLUECORE_API_PATH: "http://localhost:3000/"
     command: sh -lc "npm install && npm run dev-external -- --host"
