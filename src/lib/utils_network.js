@@ -1,3 +1,4 @@
+import blueCoreNetwork from "./local/bluecore_network";
 import {useConfigStore} from "../stores/config";
 import {usePreferenceStore} from "../stores/preference";
 
@@ -321,6 +322,8 @@ const utilsNetwork = {
                 signal: signal
             }
         }
+        options = await blueCoreNetwork.blueCoreOptions(url, options)
+
         // console.log("url:",url)
         // console.log('options:',options)
         try {
@@ -2543,7 +2546,7 @@ const utilsNetwork = {
             // .then(data => console.log(data)) // Manipulate the data retrieved back, if we want to do something with it
             .catch((err) => {
                 console.log(err, " => ", url)
-                alert("Error: Could not save the record!", err)
+                // alert("Error: Could not save the record!", err) // TODO: => Comment back in once bluecore feature enabled
             }) // Do something with the error
     },
 
@@ -2731,15 +2734,18 @@ const utilsNetwork = {
         const bodyPayload = { name: uuid, rdfxml: xml, eid: eid, hub: postingHub };
         console.log("🚧 JSON.stringify: ", JSON.stringify(bodyPayload));
 
-        // request/response debug
-        const rawResponse = await fetch(url, {
+        // Build JSON options
+        let options = {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(bodyPayload)
-        });
+        };
+        // Inject Bluecore Keycloak Authorization Bearer Token
+        options = (await blueCoreNetwork.blueCoreOptions(url, options)) || options;
+        const rawResponse = await fetch(url, options);
 
         console.log("🚧 rawResponse.ok: ", rawResponse.ok);
         console.log("🚧 rawResponse.status: ", rawResponse.status);
