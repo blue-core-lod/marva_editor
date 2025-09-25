@@ -4,6 +4,12 @@ const blueCoreNetwork = {
     blueCoreOptions: async function (url, options = {}) {
         // Always ensure headers exist and don't clobber caller's headers
         options.headers = {...(options.headers || {})};
+        console.log("")
+        console.log("✅ ########")
+        console.log("✅ url: ", url)
+        console.log("✅ VITE_BLUECORE_API_PATH: ", import.meta.env.VITE_BLUECORE_API_PATH)
+        console.log("✅ #########")
+        console.log("")
 
         if (url.startsWith(import.meta.env.VITE_BLUECORE_API_PATH)) {
             await keycloak.updateToken(30);

@@ -2745,6 +2745,8 @@ const utilsNetwork = {
         };
         // Inject Bluecore Keycloak Authorization Bearer Token
         options = (await blueCoreNetwork.blueCoreOptions(url, options)) || options;
+        console.log("🚧 options: ", options);
+
         const rawResponse = await fetch(url, options);
 
         console.log("🚧 rawResponse.ok: ", rawResponse.ok);
