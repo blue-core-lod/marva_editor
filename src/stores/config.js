@@ -1,6 +1,7 @@
 import {defineStore} from 'pinia'
 import utilsNetwork from '@/lib/utils_network';
-const apiBase = (import.meta.env.VITE_BLUECORE_API_PATH || 'http://localhost:3000')
+// const apiBase = (import.meta.env.VITE_BLUECORE_API_PATH || 'http://localhost:3000')
+const apiBase = `${window.location.origin}/api/`;
 
 export const useConfigStore = defineStore('config', {
     state: () => ({
