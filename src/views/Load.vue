@@ -629,12 +629,12 @@ export default {
     },
 
 
-    // ==========================================================================
+    // ==========================================================================]
     // - If HTTP(S) /instances/<uuid> → rewrite to /cbd/<uuid>.rdf
     // - If bare UUID, pick API origin (localhost:3000 when Marva at :4444,
     //   else https://dev.bcld.info), build /api/cbd/<uuid>.rdf, DO NOT auto-load.
     // - Keep BFDB paste behavior as-is.
-    // --------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     loadSearch: function () {
       this.lccnLoadSelected = null
       console.log("this.urlToLoad", this.urlToLoad)
@@ -658,10 +658,7 @@ export default {
         }
       }
       // --- Case 2: direct HTTP(S) input --------------------------------------
-      else if (
-          this.urlToLoad.startsWith('http://') ||
-          this.urlToLoad.startsWith('https://')
-      ) {
+      else if (this.urlToLoad.startsWith('http://') || this.urlToLoad.startsWith('https://')) {
         try {
           const u = new URL(this.urlToLoad)
           // Match /instances/<uuid> (36-char UUID), with optional trailing slash
@@ -670,48 +667,37 @@ export default {
           )
           if (m) {
             const uuid = m[1]
-            // Replace the tail segment with /cbd/<uuid>.rdf
-            u.pathname = u.pathname.replace(
-                /\/instances\/([0-9a-fA-F-]+)(?:\/)?$/,
-                `/cbd/${uuid}.rdf`
-            )
-            // Normalize by dropping query/hash
+            // Force the correct API path (adds /api even if original URL lacked it)
+            u.pathname = `/api/cbd/${uuid}.rdf`
             u.search = ''
             u.hash = ''
             this.urlToLoad = u.toString()
             this.urlToLoadIsHttp = true
-            // CHANGED: don't auto-load here
+            // Do not auto-load
             return false
           }
         } catch (e) {
           console.warn('URL parse failed; keeping original URL', e)
         }
-        // Not an /instances/<uuid> pattern: keep original behavior
+        // Non-matching HTTP(S)
         this.urlToLoadIsHttp = true
         return false
       } else {
 
-        // --- Accept bare UUID and convert to CBD RDF --------------------
+        // --- Case 3: bare UUID and convert to CBD RDF --------------------
         const uuidOnly = this.urlToLoad.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
         if (uuidOnly) {
-          // Decide API origin based on where Marva is running
-          const isLocalMarva =
-              window.location.hostname === 'localhost' &&
-              window.location.port === '4444'
-          const apiOrigin = isLocalMarva
-              ? 'http://localhost:3000'
-              : 'https://dev.bcld.info'
-          const apiPrefix = '/api'
-
-          this.urlToLoad = `${apiOrigin}${apiPrefix}/cbd/${uuidOnly[0]}.rdf`
+          const isLocalMarva = (window.location.hostname === 'localhost' && window.location.port === '4444')
+          const apiOrigin = isLocalMarva ? 'http://localhost:3000' : 'https://dev.bcld.info'
+          this.urlToLoad = `${apiOrigin}/api/cbd/${uuidOnly[0]}.rdf`
           this.urlToLoadIsHttp = true
+          // Do not auto-load
           return false
         }
         this.urlToLoadIsHttp = false
       }
 
-      // --- Case 3: fallback to LCCN search -----------------------------------
-      // lccns are not short
+      // --- Fallback: LCCN search (unchanged) ---------------------------------
       if (this.urlToLoad.length < 8) { return false }
 
       window.clearTimeout(this.lccnToSearchTimeout)
@@ -745,6 +731,7 @@ export default {
         }
       }, 500)
     },
+
 
     reloadRecord: function(record){
       let url
