@@ -607,50 +607,43 @@ export default {
       dashBoard.totalDays = Math.floor((new Date().getTime() / 1000 - oldestDate) / 86400)
       // console.log(dashBoard)
       this.dashBoard = dashBoard
-
       this.dataTableRecords = this.allRecords.slice(0, this.dataTableInitalLimit)
-
-
       this.isLoadingAllRecords = false
-
-
     },
 
     returnTimeAgo: function (timestamp) {
       return timeAgo.format(timestamp * 1000)
     },
 
-
     returnPixleAsPercent: function (pixles) {
       return pixles / window.innerHeight * 100
     },
 
     loadTestData: function (meta) {
-
-
       let href = window.location.href.split("/")
       this.urlToLoad = `/${href[3]}/${href[4]}/test_files/${meta.lccn}.xml`
       this.urlToLoadIsHttp = true
       this.loadUrl(meta.profileId)
     },
-
     loadYourRecord: async function () {
-
-
-
     },
 
+
+    // ==========================================================================]
+    // - If HTTP(S) /instances/<uuid> → rewrite to /cbd/<uuid>.rdf
+    // - If bare UUID, pick API origin (localhost:3000 when Marva at :4444,
+    //   else https://dev.bcld.info), build /api/cbd/<uuid>.rdf, DO NOT auto-load.
+    // - Keep BFDB paste behavior as-is.
+    // -------------------------------------------------------------------------
     loadSearch: function () {
       this.lccnLoadSelected = null
       console.log("this.urlToLoad", this.urlToLoad)
       console.log("this.urlToLoad.indexOf('BFDB URI')", this.urlToLoad.indexOf('BFDB URI'))
       console.log("this.urlToLoad.indexOf('Status')", this.urlToLoad.indexOf('Status'))
-      if (this.urlToLoad.startsWith("http://") || this.urlToLoad.startsWith("https://")) {
-        this.urlToLoadIsHttp = true
-        return false
-      } else if (this.urlToLoad.indexOf('BFDB URI') > -1 && this.urlToLoad.indexOf('Status') > -1) {
 
-        let urlMatch = this.urlToLoad.match(/:\/\/[^\s\/]+\/.*?\/instances\/[^\s]+/g);
+      // --- Case 1: pasted log line with BFDB + Status ------------------------
+      if (this.urlToLoad.indexOf('BFDB URI') > -1 && this.urlToLoad.indexOf('Status') > -1) {
+        let urlMatch = this.urlToLoad.match(/:\/\/[^\s/]+\/.*?\/instances\/[^\s]+/g)
         if (urlMatch && urlMatch.length > 0) {
           urlMatch = urlMatch[0].split(' ')
           urlMatch = urlMatch[urlMatch.length - 1]
@@ -659,23 +652,57 @@ export default {
           this.urlToLoadIsHttp = true
           // this will tigger using the default profile
           this.loadUrl(new Event('click'), null)
-
-          return false;
+          return false
         } else {
           this.urlToLoadIsHttp = false
         }
-
-      } else {
-        this.urlToLoadIsHttp = false
-
       }
-      // lccns are not short
+      // --- Case 2: direct HTTP(S) input --------------------------------------
+      else if (this.urlToLoad.startsWith('http://') || this.urlToLoad.startsWith('https://')) {
+        try {
+          const u = new URL(this.urlToLoad)
+          // Match /instances/<uuid> (36-char UUID), with optional trailing slash
+          const m = u.pathname.match(
+              /\/instances\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:\/)?$/
+          )
+          if (m) {
+            const uuid = m[1]
+            // Force the correct API path (adds /api even if original URL lacked it)
+            u.pathname = `/api/cbd/${uuid}.rdf`
+            u.search = ''
+            u.hash = ''
+            this.urlToLoad = u.toString()
+            this.urlToLoadIsHttp = true
+            // Do not auto-load
+            return false
+          }
+        } catch (e) {
+          console.warn('URL parse failed; keeping original URL', e)
+        }
+        // Non-matching HTTP(S)
+        this.urlToLoadIsHttp = true
+        return false
+      } else {
+
+        // --- Case 3: bare UUID and convert to CBD RDF --------------------
+        const uuidOnly = this.urlToLoad.match(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)
+        if (uuidOnly) {
+          const isLocalMarva = (window.location.hostname === 'localhost' && window.location.port === '4444')
+          const apiOrigin = isLocalMarva ? 'http://localhost:3000' : 'https://dev.bcld.info'
+          this.urlToLoad = `${apiOrigin}/api/cbd/${uuidOnly[0]}.rdf`
+          this.urlToLoadIsHttp = true
+          // Do not auto-load
+          return false
+        }
+        this.urlToLoadIsHttp = false
+      }
+
+      // --- Fallback: LCCN search (unchanged) ---------------------------------
       if (this.urlToLoad.length < 8) { return false }
 
       window.clearTimeout(this.lccnToSearchTimeout)
       this.searchByLccnResults = 'Searching...'
       this.lccnToSearchTimeout = window.setTimeout(async () => {
-
         this.searchByLccnResults = await utilsNetwork.searchInstanceByLCCN(this.urlToLoad)
 
         // If there's only one result, load it so the user doesn't have to do any clicking
@@ -694,24 +721,17 @@ export default {
                   results = new Date(results).getTime()
                   results = this.returnTimeAgo(results / 1000)
                   this.recordLastSystemDate[r.idURL] = results
-
                 } catch (e) {
                   console.warn("Error parsing date", e)
                   this.recordLastSystemDate[r.idURL] = 'error'
-
                 }
               }
-
             })
-
           }
         }
-
-
       }, 500)
-
-
     },
+
 
     reloadRecord: function(record){
       let url
