@@ -65,7 +65,7 @@ export const useConfigStore = defineStore('config', {
                 ldpjs: 'http://localhost:3000/api-staging/',         //TODO: Needs to be implemented
                 util: 'http://localhost:3000/util/',                //TODO: Needs to be implemented
                 utilLang: 'http://localhost:3000/util-lang/',         //TODO: Needs to be implemented
-                scriptshifter: 'http://localhost:3000/scriptshifter/',//TODO: Needs to be implemented
+                scriptshifter: 'https://bibframe.org/scriptshifter/',
                 publish: `${apiBase}batches/upload/`,
                 validate: 'http://localhost:5200/validate/stage',
                 profiles: 'https://raw.githubusercontent.com/lcnetdev/bfe-profiles/main/profile-stage/data.json',
