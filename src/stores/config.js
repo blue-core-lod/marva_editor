@@ -1,6 +1,6 @@
 import {defineStore} from 'pinia'
 import utilsNetwork from '@/lib/utils_network';
-const apiBase = (import.meta.env.VITE_BLUECORE_API_PATH || 'http://localhost:3000')
+const apiBase = (import.meta.env.VITE_BLUECORE_API_PATH || 'http://localhost:8000').replace(/\/+$/, '') + '/';
 
 export const useConfigStore = defineStore('config', {
     state: () => ({
@@ -66,7 +66,7 @@ export const useConfigStore = defineStore('config', {
                 util: 'http://localhost:3000/util/',                //TODO: Needs to be implemented
                 utilLang: 'http://localhost:3000/util-lang/',         //TODO: Needs to be implemented
                 scriptshifter: 'https://bibframe.org/scriptshifter/',
-                publish: `${apiBase}batches/upload/`,
+                publish: `${apiBase}/batches/upload/`,
                 validate: 'http://localhost:5200/validate/stage',
                 profiles: 'https://raw.githubusercontent.com/lcnetdev/bfe-profiles/main/profile-stage/data.json',
                 starting: 'https://raw.githubusercontent.com/lcnetdev/bfe-profiles/main/starting-stage/data.json',
@@ -1218,10 +1218,12 @@ export const useConfigStore = defineStore('config', {
             // testing for window here because of running unit tests in node
             if (typeof window !== 'undefined') {
                 console.log("window: ", window.location.href)
-                if (window && (window.location.href.includes('localhost/marva/') && window.location.href.startsWith('http://localhost'))) {
+                if (window && (window.location.href.includes('localhost:8000/marva/') && window.location.href.startsWith('http://localhost'))) {
                     console.log(">>>>>>>includes('localhost/marva/)<<<<<<<<<")
                     return state.regionUrls.externalDev
-
+                } else if (window && (window.location.href.includes('localhost/marva/') && window.location.href.startsWith('http://localhost'))) {
+                    console.log(">>>>>>>includes('localhost/marva/)<<<<<<<<<")
+                    return state.regionUrls.externalDev
                 } else if (window && (window.location.href.includes('https://dev.bcld.info/marva/'))) {
                     console.log(">>>>>>>window.location.href.includes('https://dev.bcld.info/marva/')<<<<<<<<<")
                     return state.regionUrls.externalDev
