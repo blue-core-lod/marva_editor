@@ -34,6 +34,7 @@ jobs:
       - name: Build and push marva keycloak middleware :latest
         env:
           MARVA_KEYCLOAK_MIDDLEWARE_IMAGE: ghcr.io/blue-core-lod/marva-keycloak-middleware
+          MARVA_UTIL_PATH: "https://bibframe.org"
         run: |
           docker build \
             -f Dockerfile.middleware \
