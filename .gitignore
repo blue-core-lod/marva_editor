@@ -17,3 +17,5 @@ coverage/
 *.env
 public/profiles.json
 public/rtLookup.json
+/logs/*
+.idea/

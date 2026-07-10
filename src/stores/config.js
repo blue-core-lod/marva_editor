@@ -9,7 +9,7 @@ export const useConfigStore = defineStore('config', {
 
     versionMajor: 1,
     versionMinor: 6,
-    versionPatch: 2,
+    versionPatch: 3,
 
 
 
@@ -62,7 +62,6 @@ export const useConfigStore = defineStore('config', {
         // profiles: 'https://editor.id.loc.gov/marva/util/profiles/profile/prod',
 
         profiles : 'https://editor.id.loc.gov/marva/dancer/api/serve/marva-prod/profile',
-        // profiles : 'https://editor.id.loc.gov/marva/dancer/api/serve/marva-prod-copy-subjects/profile',
         starting : 'https://editor.id.loc.gov/marva/dancer/api/serve/marva-prod/starting-points',
         // profiles:  'https://editor.id.loc.gov/marva/dancer/api/serve/marva-stage/profile',
         // starting : 'https://editor.id.loc.gov/marva/dancer/api/serve/marva-stage/starting-points',
