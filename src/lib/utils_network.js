@@ -1,6 +1,7 @@
 import {useConfigStore} from "../stores/config";
 import {usePreferenceStore} from "../stores/preference";
-import {applyBluecoreLookupRequest, addBluecoreHeaders, isLdpjsDisabled} from "@/bluecore/utils";
+import {applyBluecoreLookupRequest, addBluecoreHeaders} from "@/bluecore/utils";
+import {isLocalScratchpad, saveRecordLocal, loadRecordLocal} from "@/bluecore/scratchpad";
 
 import short from 'short-uuid'
 const translator = short();
@@ -2977,7 +2978,7 @@ const utilsNetwork = {
     */
 
     saveRecord: async function(xml, eId){
-      if (isLdpjsDisabled(useConfigStore().returnUrls)) { return false }  // Bluecore: no ldpjs backend configured yet
+      if (isLocalScratchpad(useConfigStore().returnUrls)) { return saveRecordLocal(xml, eId) }  // Bluecore: no ldpjs backend, use localStorage
       const putMethod = {
         method: 'PUT', // Method itself
         headers: {
@@ -3030,6 +3031,8 @@ const utilsNetwork = {
     * @return {void} -
     */
     loadSavedRecord: async function(id) {
+
+       if (isLocalScratchpad(useConfigStore().returnUrls)) { return loadRecordLocal(id) }  // Bluecore: no ldpjs backend, use localStorage
 
        let url = useConfigStore().returnUrls.ldpjs +'ldp/' + id
 
