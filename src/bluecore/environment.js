@@ -65,7 +65,7 @@ export const prod = {
   env : 'production',
   dev: false,
   externalDev: false,
-  displayLCOnlyFeatures: false,
+  displayLCOnlyFeatures: true,
   simpleLookupLang: 'en',
   publicEndpoints:true,
   lcap: 'https://c2vwscf01.loc.gov/cflsops/toolkit-training-lcsg/lcap-productivity/marva/bibId/',

@@ -81,6 +81,13 @@ export function addBluecoreHeaders(baseOptions = {}, overrideOptions = {}) {
   return { ...baseOptions, ...overrideOptions, headers: { ...(baseOptions.headers || {}), ...(overrideOptions.headers || {}) }}
 }
 
+// True when the scratch-pad (ldpjs) backend is not configured for this environment.
+// Bluecore has no ldpjs backend yet...
+// so skip the save instead of firing a failed request and alerting the user.
+export function isLdpjsDisabled(returnUrls) {
+  return !returnUrls || !returnUrls.ldpjs || returnUrls.ldpjs.trim() === ''
+}
+
 // Applies Bluecore URL normalization
 export function applyBluecoreLookupRequest(url, options = {}) {
   const resolvedUrl = resolveBluecoreCbdUrl(url)

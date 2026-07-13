@@ -1,6 +1,6 @@
 import {useConfigStore} from "../stores/config";
 import {usePreferenceStore} from "../stores/preference";
-import {applyBluecoreLookupRequest, addBluecoreHeaders} from "@/bluecore/utils";
+import {applyBluecoreLookupRequest, addBluecoreHeaders, isLdpjsDisabled} from "@/bluecore/utils";
 
 import short from 'short-uuid'
 const translator = short();
@@ -2977,6 +2977,7 @@ const utilsNetwork = {
     */
 
     saveRecord: async function(xml, eId){
+      if (isLdpjsDisabled(useConfigStore().returnUrls)) { return false }  // Bluecore: no ldpjs backend configured yet
       const putMethod = {
         method: 'PUT', // Method itself
         headers: {
