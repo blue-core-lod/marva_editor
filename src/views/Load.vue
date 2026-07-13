@@ -409,7 +409,7 @@ import Nav from "@/components/panels/nav/Nav.vue";
 import utilsProfile from '@/lib/utils_profile';
 import utilsNetwork from '@/lib/utils_network';
 import utilsParse from '@/lib/utils_parse';
-import { isBluecoreUuidInput, startBluecoreResourceAutoLoad } from '@/lib/utils_bluecore';
+import { isBluecoreUuidInput, startBluecoreResourceAutoLoad } from '@/bluecore/utils';
 import short from 'short-uuid'
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en'

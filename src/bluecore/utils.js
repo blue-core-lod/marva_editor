@@ -1,3 +1,9 @@
+// #############################################################################
+// ###################  Blue Core Utility Functions  ###########################
+// ##                                                                         ##
+// ## Blue Core specific utility functions will be used  here.                ##
+// #############################################################################
+
 // Base URL for Bluecore API calls
 const bluecoreApiBase = import.meta.env.VITE_BLUECORE_API_PATH.replace(/\/+$/, '')
 // UUID matcher used for UUID input
@@ -73,6 +79,13 @@ export function startBluecoreResourceAutoLoad(loadViewModel, intervalMs = 600) {
 // Merges request options while combining headers
 export function addBluecoreHeaders(baseOptions = {}, overrideOptions = {}) {
   return { ...baseOptions, ...overrideOptions, headers: { ...(baseOptions.headers || {}), ...(overrideOptions.headers || {}) }}
+}
+
+// True when the scratch-pad (ldpjs) backend is not configured for this environment.
+// Bluecore has no ldpjs backend yet...
+// so skip the save instead of firing a failed request and alerting the user.
+export function isLdpjsDisabled(returnUrls) {
+  return !returnUrls || !returnUrls.ldpjs || returnUrls.ldpjs.trim() === ''
 }
 
 // Applies Bluecore URL normalization
