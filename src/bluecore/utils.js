@@ -1,3 +1,9 @@
+// #############################################################################
+// ###################  Blue Core Utility Functions  ###########################
+// ##                                                                         ##
+// ## Blue Core specific utility functions will be used  here.                ##
+// #############################################################################
+
 // Base URL for Bluecore API calls
 const bluecoreApiBase = import.meta.env.VITE_BLUECORE_API_PATH.replace(/\/+$/, '')
 // UUID matcher used for UUID input

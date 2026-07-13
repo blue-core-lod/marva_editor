@@ -1,6 +1,6 @@
 import {useConfigStore} from "../stores/config";
 import {usePreferenceStore} from "../stores/preference";
-import {applyBluecoreLookupRequest, addBluecoreHeaders} from "./utils_bluecore";
+import {applyBluecoreLookupRequest, addBluecoreHeaders} from "@/bluecore/utils";
 
 import short from 'short-uuid'
 const translator = short();
