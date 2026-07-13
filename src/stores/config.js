@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia'
 import utilsNetwork from '@/lib/utils_network';
 import scriptShifterLangCodes from '@/lib/scriptShifterLangCodes.json';
-const apiBase = (import.meta.env.VITE_BLUECORE_API_PATH || 'http://localhost:3000') // Bluecore API Base Endpoint
-const utilBase = (import.meta.env.VITE_KEYCLOAK_MIDDLEWARE_BASE || '/marva/util/') //default: 'http://localhost:9401/marva/util/'
+import bluecore from '@/bluecore/environment';
 
 export const useConfigStore = defineStore('config', {
   state: () => ({
@@ -15,6 +14,8 @@ export const useConfigStore = defineStore('config', {
 
 
     regionUrls: {
+
+      bluecore,
 
       dev:{
 
@@ -82,10 +83,10 @@ export const useConfigStore = defineStore('config', {
 
       externalDev:{
 
-        ldpjs : "",  //TODO: Needs to be implemented. original endpoint:'http://localhost:9401/marva/api-staging/',
-        util  : utilBase,
-        scriptshifter: 'https://bibframe.org/scriptshifter/',
-        publish: `${apiBase}batches/upload/`, // Bluecore API Endpoint
+        ldpjs : 'http://localhost:9401/marva/api-staging/',
+        util  : 'http://localhost:9401/marva/util/',
+        scriptshifter: 'http://localhost:9401/marva/scriptshifter/',
+        publish : 'http://localhost:9401/marva/util/publish/staging',
         validate: 'http://localhost:9401/marva/util/validate/prod',
         profiles: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-profiles.json',
         starting: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-starting.json',
@@ -899,14 +900,14 @@ export const useConfigStore = defineStore('config', {
         // ##################  Bluecore URLS Start  ############################
         if (window && (window.location.href.includes('localhost/marva/') && window.location.href.startsWith('http://localhost'))) {
           console.log(">>>>>>>includes('localhost/marva/)<<<<<<<<<")
-          return state.regionUrls.externalDev
+          return state.regionUrls.bluecore.prod
         // =================================================================
         // TODO: we will want to update this later to use production config
         // (not externalDev) for bluecore at a later date when we are ready.
         // -----------------------------------------------------------------
         } else if (window && (window.location.href.includes('https://dev.bcld.info/marva/'))) {
           console.log(">>>>>>>window.location.href.includes('https://dev.bcld.info/marva/')<<<<<<<<<")
-          return state.regionUrls.externalDev
+          return state.regionUrls.bluecore.prod
           // ##################  Bluecore URLS End  ##############################
 
         } else if (window && (!window.location.href.includes('localhost:5555') && !window.location.href.includes('localhost:4444') && window.location.href.startsWith('http://localhost') || window.location.href.startsWith('http://127.0.0.1') )) {
