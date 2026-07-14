@@ -98,6 +98,8 @@
                   :class="['simptip-position-bottom', { 'active': (searchMode === 'HUBS') }]">Hubs</button>
                 <button @click="searchModeSwitch('ENTITIES')" :data-tooltip="'Shortcut: CTRL+ALT+5'"
                   :class="['simptip-position-bottom', { 'active': (searchMode === 'ENTITIES') }]" v-if="configStore.returnUrls.env == 'staging'">Entities</button>
+                <button @click="searchModeSwitch('BCLUP')" :data-tooltip="'Shortcut: CTRL+ALT+6'"
+                  :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP') }]">BCLUP</button>
               </div>
 
 
@@ -1442,6 +1444,8 @@ export default {
 		try {
 			this.renderHintBoxes()
 		} catch(err) { }
+      } else if (mode == 'BCLUP') {
+        // BCLUP mode: no special component manipulation needed
       } else {
         // Above we took loose components and combined them,
         // here we undo that incase someone made a mistake and the geo
@@ -1561,6 +1565,10 @@ export default {
         this.pickLookup[x] = this.searchResults.entities[x]
 
       }
+
+      for (let x in this.searchResults.bclup) {
+        this.pickLookup[x] = this.searchResults.bclup[x]
+      }
     },
 
     // some context messing here, pass the debounce func a ref to the vue "this" as that to ref in the function callback
@@ -1655,6 +1663,10 @@ export default {
 	  for (let s of that.searchResults.entities){
 		s.entity = true
 	  }
+
+      for (let s of that.searchResults.bclup) {
+        s.bclup = true
+      }
 
       for (let s of that.searchResults.subjectsSimple) {
         if (s.suggestLabel && s.suggestLabel.includes('(DEPRECATED')) {
@@ -2354,6 +2366,8 @@ export default {
         this.searchModeSwitch("HUBS")
       } else if (event.ctrlKey && event.altKey && event.key == "5") {
         this.searchModeSwitch("ENTITIES")
+      } else if (event.ctrlKey && event.altKey && event.key == "6") {
+        this.searchModeSwitch("BCLUP")
       } else if ((this.searchMode == 'GEO' || this.searchMode == 'ENTITIES') && event.key == "-") {
         if (this.components.length > 0) {
           let lastC = this.components[this.components.length - 1]

@@ -880,6 +880,18 @@ export const useConfigStore = defineStore('config', {
 
         }
       ]
+    },
+
+    "https://bcl-up.library.cornell.edu/authorities/search/linked_data/getty_direct": {
+      "name": "bclup",
+      "type": "complex",
+      "processor": "bclupAPI",
+      "modes": [
+        {
+          "aat": {"url": "https://bcl-up.library.cornell.edu/authorities/search/linked_data/getty_direct/aat?q=<QUERY>", "all": true},
+          "homosaurus": {"url": "https://bcl-up.library.cornell.edu/authorities/search/linked_data/homosaurus_direct?q=<QUERY>", "all": true},
+        }
+      ]
     }
   },
 

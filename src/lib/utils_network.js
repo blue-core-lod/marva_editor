@@ -59,6 +59,7 @@ const utilsNetwork = {
       "exactSubject": new AbortController(),
       "lccnSearchController": new AbortController(),
       "controllerEntities": new AbortController(),
+      "controllerBclup": new AbortController(),
     },
     subjectSearchActive: false,
 
@@ -680,6 +681,32 @@ const utilsNetwork = {
                     uri: hit.concepturi,
                     literal:false,
                     extra: ''
+                  })
+                }
+            } else if (Array.isArray(r) && r.length > 0 && searchPayload.processor == 'bclupAPI') {
+                for (const hit of r) {
+                  results.push({
+                    collections: [],
+                    label: hit.label,
+                    suggestLabel: hit.label,
+                    uri: hit.uri,
+                    literal: false,
+                    depreciated: false,
+                    extra: {
+                      rdftypes: ['Topic'],
+                      type: 'madsrdf:Topic',
+                      variantLabels: [],
+                      relateds: [],
+                      hasEarlierEstablishedForms: [],
+                      hasLaterEstablishedForms: [],
+                      broaders: [],
+                      collections: [],
+                    },
+                    total: r.length,
+                    bclup: true,
+                    undifferentiated: false,
+                    subdivision: false,
+                    count: 0,
                   })
                 }
             }
@@ -2548,6 +2575,10 @@ const utilsNetwork = {
 
       let subjectEntitiesUrl = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['ENTITIES'].url.replace('<QUERY>',searchVal).replace('&count=25','&count=50').replace("<OFFSET>", "1")
 
+      const BCLUP_CONFIG_KEY = 'https://bcl-up.library.cornell.edu/authorities/search/linked_data/getty_direct'
+      let bclupAatUrl = useConfigStore().lookupConfig[BCLUP_CONFIG_KEY].modes[0]['aat'].url.replace('<QUERY>', searchVal)
+      let bclupHomosaurusUrl = useConfigStore().lookupConfig[BCLUP_CONFIG_KEY].modes[0]['homosaurus'].url.replace('<QUERY>', searchVal)
+
       if (mode == 'GEO'){
         subjectUrlHierarchicalGeographic = subjectUrlHierarchicalGeographic.replace('&count=4','&count=12').replace("<OFFSET>", "1")
       }
@@ -2737,6 +2768,22 @@ const utilsNetwork = {
         signal: this.controllers.controllerEntities.signal,
       }
 
+      let searchPayloadBclupAat = {
+        processor: 'bclupAPI',
+        url: [bclupAatUrl],
+        searchValue: searchVal,
+        subjectSearch: true,
+        signal: this.controllers.controllerBclup.signal,
+      }
+
+      let searchPayloadBclupHomosaurus = {
+        processor: 'bclupAPI',
+        url: [bclupHomosaurusUrl],
+        searchValue: searchVal,
+        subjectSearch: true,
+        signal: this.controllers.controllerBclup.signal,
+      }
+
 
 
       let resultsNames =[]
@@ -2764,6 +2811,8 @@ const utilsNetwork = {
       let resultsExactSubject = []
 
       let resultsEntities = []
+
+      let resultsBclup = []
 
       // this.searchExact(exactPayloadName),
       // this.searchExact(exactPayloadSubject),
@@ -2828,6 +2877,17 @@ const utilsNetwork = {
         [resultsEntities] = await Promise.all([
             this.searchComplex(searchPayloadEntities)
         ]);
+      } else if (mode == "BCLUP") {
+        let [resultsAat, resultsHomosaurus] = await Promise.all([
+            this.searchComplex(searchPayloadBclupAat),
+            this.searchComplex(searchPayloadBclupHomosaurus),
+        ])
+        if (resultsAat.length > 0 && resultsAat.at(-1).literal) resultsAat.pop()
+        if (resultsHomosaurus.length > 0 && resultsHomosaurus.at(-1).literal) resultsHomosaurus.pop()
+        resultsAat.forEach(r => { r.suggestLabel = r.label + ' [Getty AAT]' })
+        resultsHomosaurus.forEach(r => { r.suggestLabel = r.label + ' [Homosaurus]' })
+        resultsBclup = [...resultsAat, ...resultsHomosaurus]
+        resultsBclup.push({ label: searchVal, uri: null, literal: true, extra: '' })
       }
 
       // drop the litearl value from names and complex
@@ -2960,6 +3020,7 @@ const utilsNetwork = {
         'subjectsChildrenComplex': resultsChildrenSubjectsComplex,
         'exact': exact,
         'entities': resultsEntities,
+        'bclup': resultsBclup,
       }
 
       this.subjectSearchActive = false

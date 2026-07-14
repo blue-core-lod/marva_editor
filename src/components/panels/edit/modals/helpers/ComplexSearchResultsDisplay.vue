@@ -93,6 +93,17 @@
                 @emitLoadContext="loadContext"
                 :searchMode="searchMode"
             />
+
+            <SearchResultOption
+                searchType="bclup"
+                label="BCLUP"
+                index="ix"
+                :searchResults="searchResults"
+                :pickLookup="pickLookup"
+                @selectContext="selectContext"
+                @emitLoadContext="loadContext"
+                :searchMode="searchMode"
+            />
         </div>
     </div>
 </template>
