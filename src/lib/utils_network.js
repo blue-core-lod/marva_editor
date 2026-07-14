@@ -1,5 +1,6 @@
 import {useConfigStore} from "../stores/config";
 import {usePreferenceStore} from "../stores/preference";
+import {BCLUP_BASE} from '@/bluecore/environment';
 import {applyBluecoreLookupRequest, addBluecoreHeaders} from "@/bluecore/utils";
 import {isLocalScratchpad, saveRecordLocal, loadRecordLocal} from "@/bluecore/scratchpad";
 
@@ -2575,9 +2576,8 @@ const utilsNetwork = {
 
       let subjectEntitiesUrl = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['ENTITIES'].url.replace('<QUERY>',searchVal).replace('&count=25','&count=50').replace("<OFFSET>", "1")
 
-      const BCLUP_CONFIG_KEY = 'https://bcl-up.library.cornell.edu/authorities/search/linked_data/getty_direct'
-      let bclupAatUrl = useConfigStore().lookupConfig[BCLUP_CONFIG_KEY].modes[0]['aat'].url.replace('<QUERY>', searchVal)
-      let bclupHomosaurusUrl = useConfigStore().lookupConfig[BCLUP_CONFIG_KEY].modes[0]['homosaurus'].url.replace('<QUERY>', searchVal)
+      let bclupAatUrl = useConfigStore().lookupConfig[BCLUP_BASE].modes[0]['aat'].url.replace('<QUERY>', searchVal)
+      let bclupHomosaurusUrl = useConfigStore().lookupConfig[BCLUP_BASE].modes[0]['homosaurus'].url.replace('<QUERY>', searchVal)
 
       if (mode == 'GEO'){
         subjectUrlHierarchicalGeographic = subjectUrlHierarchicalGeographic.replace('&count=4','&count=12').replace("<OFFSET>", "1")
@@ -2768,7 +2768,7 @@ const utilsNetwork = {
         signal: this.controllers.controllerEntities.signal,
       }
 
-      let searchPayloadBclupAat = {
+      let searchPayloadBclupGetty = {
         processor: 'bclupAPI',
         url: [bclupAatUrl],
         searchValue: searchVal,
@@ -2879,7 +2879,7 @@ const utilsNetwork = {
         ]);
       } else if (mode == "BCLUP") {
         let [resultsAat, resultsHomosaurus] = await Promise.all([
-            this.searchComplex(searchPayloadBclupAat),
+            this.searchComplex(searchPayloadBclupGetty),
             this.searchComplex(searchPayloadBclupHomosaurus),
         ])
         if (resultsAat.length > 0 && resultsAat.at(-1).literal) resultsAat.pop()

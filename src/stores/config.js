@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import utilsNetwork from '@/lib/utils_network';
 import scriptShifterLangCodes from '@/lib/scriptShifterLangCodes.json';
-import bluecore from '@/bluecore/environment';
+import {bluecore, BCLUP_BASE} from '@/bluecore/environment';
 
 export const useConfigStore = defineStore('config', {
   state: () => ({
@@ -882,14 +882,14 @@ export const useConfigStore = defineStore('config', {
       ]
     },
 
-    "https://bcl-up.library.cornell.edu/authorities/search/linked_data/getty_direct": {
+    [BCLUP_BASE]: {
       "name": "bclup",
       "type": "complex",
       "processor": "bclupAPI",
       "modes": [
         {
-          "aat": {"url": "https://bcl-up.library.cornell.edu/authorities/search/linked_data/getty_direct/aat?q=<QUERY>", "all": true},
-          "homosaurus": {"url": "https://bcl-up.library.cornell.edu/authorities/search/linked_data/homosaurus_direct?q=<QUERY>", "all": true},
+          "aat": {"url": BCLUP_BASE+"/getty_direct/aat?q=<QUERY>", "all": true},
+          "homosaurus": {"url": BCLUP_BASE+"/homosaurus_direct?q=<QUERY>", "all": true},
         }
       ]
     }

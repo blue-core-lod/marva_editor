@@ -5,7 +5,7 @@
 // #############################################################################
 const apiBase = (import.meta.env.VITE_BLUECORE_API_PATH || 'http://localhost:3000') // Bluecore API Base Endpoint
 const utilBase = (import.meta.env.VITE_KEYCLOAK_MIDDLEWARE_BASE || '/marva/util/') //default: 'http://localhost:9401/marva/util/'
-
+export const BCLUP_BASE = (import.meta.env.VITE_BCLUP_BASE || 'https://lookup.ld4l.org/authorities/search/linked_data')
 
 export const dev = {
   ldpjs : "",  //TODO: Needs to be implemented.
