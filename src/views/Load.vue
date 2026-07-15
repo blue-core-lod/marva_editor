@@ -410,6 +410,7 @@ import utilsProfile from '@/lib/utils_profile';
 import utilsNetwork from '@/lib/utils_network';
 import utilsParse from '@/lib/utils_parse';
 import { isBluecoreUuidInput, startBluecoreResourceAutoLoad } from '@/bluecore/utils';
+import { isLocalScratchpad, reopenPostedRecordLocal } from '@/bluecore/scratchpad'; // BLUECORE PLUGIN
 import short from 'short-uuid'
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en'
@@ -802,6 +803,18 @@ export default {
     },
 
     reloadRecord: function(record){
+      // START BLUECORE CUSTOM CODE ============================================
+      // Bluecore: no BFDB to pull an editor-pkg from. A posted record is still in
+      // the local scratch pad, so reopen it as a fresh unposted working copy (the
+      // original posted record is preserved) and open that in the editor. The
+      // continue-records list uses `eid`; the All Records data table uses `Id`.
+      if (isLocalScratchpad(useConfigStore().returnUrls)) {
+        let openEid = reopenPostedRecordLocal(record.eid || record.Id)
+        this.$router.push({ name: 'Edit', params: { recordId: openEid } })
+        return
+      }
+      // END BLUECORE CUSTOM CODE ==============================================
+
       let url
       let profile
 

@@ -1,7 +1,7 @@
 import {useConfigStore} from "../stores/config";
 import {usePreferenceStore} from "../stores/preference";
 import {applyBluecoreLookupRequest, addBluecoreHeaders} from "@/bluecore/utils";
-import {isLocalScratchpad, saveRecordLocal, loadRecordLocal} from "@/bluecore/scratchpad";
+import {isLocalScratchpad, saveRecordLocal, loadRecordLocal, searchSavedRecordsLocal} from "@/bluecore/scratchpad"; // Bluecore Plugins
 
 import short from 'short-uuid'
 const translator = short();
@@ -3160,6 +3160,7 @@ const utilsNetwork = {
      },
 
      searchSavedRecords: async function(search, allRecords){
+      if (isLocalScratchpad(useConfigStore().returnUrls)) { return searchSavedRecordsLocal(search) }  // Bluecore: no ldpjs backend, list localStorage records
       let utilUrl = useConfigStore().returnUrls.util
       let utilPath = useConfigStore().returnUrls.env
 
