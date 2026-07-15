@@ -81,35 +81,43 @@
 
             <div :style="`${this.preferenceStore.styleModalBackgroundColor()};`"
               :class="['subject-editor-container-left', { 'subject-editor-container-left-lowres': lowResMode }]">
-
-              <div id="search-in-holder" style="position: absolute; top:0">
-                <span>Search In:</span>
-
-
-                <button @click="searchModeSwitch('LCSHNAF')" :data-tooltip="'Shortcut: CTRL+ALT+1'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'LCSHNAF') }]">LCSH/NAF</button>
-                <button @click="searchModeSwitch('CHILD')" :data-tooltip="'Shortcut: CTRL+ALT+2'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'CHILD') }]">Children's
-                  Subjects</button>
-                <button @click="searchModeSwitch('GEO')" :data-tooltip="'Shortcut: CTRL+ALT+3'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'GEO') }]">Geo. Subdiv.</button>
-                <!-- <button @click="searchModeSwitch('WORKS')" :data-tooltip="'Shortcut: CTRL+ALT+4'" :class="['simptip-position-bottom',{'active':(searchMode==='WORKS')}]">Works</button> -->
-                <button @click="searchModeSwitch('HUBS')" :data-tooltip="'Shortcut: CTRL+ALT+4'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'HUBS') }]">Hubs</button>
-                <button @click="searchModeSwitch('ENTITIES')" :data-tooltip="'Shortcut: CTRL+ALT+5'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'ENTITIES') }]" v-if="configStore.returnUrls.env == 'staging'">Entities</button>
-                <button @click="searchModeSwitch('BCLUP')" :data-tooltip="'Shortcut: CTRL+ALT+6'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP') }]">BCLUP</button>
-              </div>
-
-
               <div
                 :style="`flex:1; align-self: flex-end; height: 95%; ${this.preferenceStore.styleModalBackgroundColor()}`"
-                :class="{ 'scroll-all': preferenceStore.returnValue('--b-edit-complex-scroll-all') && !preferenceStore.returnValue('--b-edit-complex-scroll-independently') }">
+                :class="['subject-search-column', { 'scroll-all': preferenceStore.returnValue('--b-edit-complex-scroll-all') && !preferenceStore.returnValue('--b-edit-complex-scroll-independently') }]">
+                <div id="search-in-holder">
+                  <span>Search In:</span>
+                  <div class="subject-search-mode-buttons">
+                    <button @click="searchModeSwitch('LCSHNAF')" :data-tooltip="'Shortcut: CTRL+ALT+1'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'LCSHNAF') }]">LCSH/NAF</button>
+                    <button @click="searchModeSwitch('CHILD')" :data-tooltip="'Shortcut: CTRL+ALT+2'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'CHILD') }]">Children's
+                      Subjects</button>
+                    <button @click="searchModeSwitch('GEO')" :data-tooltip="'Shortcut: CTRL+ALT+3'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'GEO') }]">Geo. Subdiv.</button>
+                    <!-- <button @click="searchModeSwitch('WORKS')" :data-tooltip="'Shortcut: CTRL+ALT+4'" :class="['simptip-position-bottom',{'active':(searchMode==='WORKS')}]">Works</button> -->
+                    <button @click="searchModeSwitch('HUBS')" :data-tooltip="'Shortcut: CTRL+ALT+4'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'HUBS') }]">Hubs</button>
+                    <button @click="searchModeSwitch('ENTITIES')" :data-tooltip="'Shortcut: CTRL+ALT+5'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'ENTITIES') }]" v-if="configStore.returnUrls.env == 'staging'">Entities</button>
+                    <!--
+                    <button @click="searchModeSwitch('BCLUP_FAST')" :data-tooltip="'Shortcut: CTRL+ALT+6'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP_FAST') }]">FAST</button>
+                    -->
+                    <button @click="searchModeSwitch('BCLUP_GETTY')" :data-tooltip="'Shortcut: CTRL+ALT+7'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP_GETTY') }]">Getty</button>
+                    <button @click="searchModeSwitch('BCLUP_HOMOSAURUS')" :data-tooltip="'Shortcut: CTRL+ALT+8'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP_HOMOSAURUS') }]">Homosaurus</button>
+                    <!--
+                    <button @click="searchModeSwitch('BCLUP_MESH')" :data-tooltip="'Shortcut: CTRL+ALT+9'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP_MESH') }]">MESH</button>
+                    -->
+                  </div>
+                </div>
                 <div v-if="activeSearch !== false">{{ activeSearch }}</div>
-                <div v-if="searchResults !== null" style="height: 100%">
+                <div v-if="searchResults !== null" class="subject-search-results">
                   <ComplexSearchResultsDisplay :searchResults="searchResults" :pickLookup="pickLookup"
-                    :searchMode="searchMode" @loadContext="loadContext" @selectContext="selectContext" @nafSearch="nafSearch"/>
+                    :searchMode="searchMode" :gettySearchType="gettySearchType" @loadContext="loadContext" @selectContext="selectContext"
+                    @nafSearch="nafSearch" @lookupSearch="lookupSearch"/>
 
                 </div>
               </div>
@@ -343,6 +351,20 @@ body #app {
   overflow-y: hidden;
 }
 
+.subject-search-column {
+  flex: 1;
+  align-self: flex-end;
+  height: 95%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.subject-search-results {
+  flex: 1;
+  min-height: 0;
+}
+
 .subject-editor-container-left-lowres {
   font-size: 0.75em !important;
   height: 352px;
@@ -545,6 +567,21 @@ body #app {
   background-color: white;
   color: black;
   border: solid 1px #c1c1c1;
+}
+
+#search-in-holder {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35em;
+  padding-bottom: 0.5em;
+}
+
+.subject-search-mode-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  width: 100%;
 }
 
 #search-in-holder .active {
@@ -807,6 +844,7 @@ export default {
       activeSearch: false,
 
       nafSearchType: 'NAF Auth Names',
+      gettySearchType: 'aat',
 
       pickPostion: 0,
       pickLookup: {},
@@ -1430,8 +1468,8 @@ export default {
               }
             }
           }
-		}
-	  } else if (mode == 'ENTITIES'){
+    }
+    } else if (mode == 'ENTITIES'){
 		// change "--" to other "--"	this might be the one -> "‑‑"
 		this.subjectString = this.subjectString.replace("--", "‑‑")
 		//Need to update components too?
@@ -1444,8 +1482,8 @@ export default {
 		try {
 			this.renderHintBoxes()
 		} catch(err) { }
-      } else if (mode == 'BCLUP') {
-        // BCLUP mode: no special component manipulation needed
+      } else if (['BCLUP_GETTY', 'BCLUP_HOMOSAURUS'].includes(mode)) {
+        // Getty/Homosaurus modes: no special component manipulation needed
       } else {
         // Above we took loose components and combined them,
         // here we undo that incase someone made a mistake and the geo
@@ -1623,7 +1661,7 @@ export default {
       }
 
       if (searchString.length > 2){
-        that.searchResults = await utilsNetwork.subjectSearch(searchString, searchStringFull, complexSub, that.searchMode, that.nafSearchType)
+        that.searchResults = await utilsNetwork.subjectSearch(searchString, searchStringFull, complexSub, that.searchMode, that.nafSearchType, that.gettySearchType)
       } else {
         return
       }
@@ -2074,6 +2112,18 @@ export default {
       this.buildPickLookup()
     },
 
+    lookupSearch: async function(type){
+      if (this.searchMode !== 'BCLUP_GETTY') {
+        return
+      }
+
+      this.gettySearchType = type
+
+      if (this.activeComponent && this.activeComponent.label) {
+        this.searchApis(this.activeComponent.label, this.subjectString, this)
+      }
+    },
+
     selectContext: async function (pickPostion, update = true) {
       if (pickPostion != null) {
         this.pickPostion = pickPostion
@@ -2366,8 +2416,10 @@ export default {
         this.searchModeSwitch("HUBS")
       } else if (event.ctrlKey && event.altKey && event.key == "5") {
         this.searchModeSwitch("ENTITIES")
-      } else if (event.ctrlKey && event.altKey && event.key == "6") {
-        this.searchModeSwitch("BCLUP")
+      } else if (event.ctrlKey && event.altKey && event.key == "7") {
+        this.searchModeSwitch("BCLUP_GETTY")
+      } else if (event.ctrlKey && event.altKey && event.key == "8") {
+        this.searchModeSwitch("BCLUP_HOMOSAURUS")
       } else if ((this.searchMode == 'GEO' || this.searchMode == 'ENTITIES') && event.key == "-") {
         if (this.components.length > 0) {
           let lastC = this.components[this.components.length - 1]
@@ -3018,6 +3070,8 @@ export default {
 
     cleanState: function () {
       this.searchMode = "LCSHNAF"
+      this.nafSearchType = 'NAF Auth Names'
+      this.gettySearchType = 'aat'
       this.components = []
       this.lookup = {}
       this.searchResults = null

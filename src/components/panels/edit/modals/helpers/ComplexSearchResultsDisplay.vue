@@ -96,13 +96,15 @@
 
             <SearchResultOption
                 searchType="bclup"
-                label="BCLUP"
+                :label="searchMode == 'BCLUP_HOMOSAURUS' ? 'Homosaurus' : 'Getty'"
                 index="ix"
                 :searchResults="searchResults"
                 :pickLookup="pickLookup"
                 @selectContext="selectContext"
                 @emitLoadContext="loadContext"
                 :searchMode="searchMode"
+                :gettySearchType="gettySearchType"
+                @lookupSearch="lookupSearch"
             />
         </div>
     </div>
@@ -152,6 +154,10 @@ export default {
         searchResults: Object,
         pickLookup: Object,
         searchMode: String,
+        gettySearchType: {
+            type: String,
+            default: 'aat',
+        },
     },
 
     watch: {},
@@ -177,6 +183,10 @@ export default {
 
         nafSearch: function(type){
             this.$emit('nafSearch', type)
+        },
+
+        lookupSearch: function(type){
+            this.$emit('lookupSearch', type)
         },
 
         loadContext:function(pickPosition){

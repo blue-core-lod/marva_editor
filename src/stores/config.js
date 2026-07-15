@@ -888,8 +888,10 @@ export const useConfigStore = defineStore('config', {
       "processor": "bclupAPI",
       "modes": [
         {
-          "aat": {"url": BCLUP_BASE+"/getty_direct/aat?q=<QUERY>", "all": true},
-          "homosaurus": {"url": BCLUP_BASE+"/homosaurus_direct?q=<QUERY>", "all": true},
+          "aat": {"url": BCLUP_BASE+"/getty_direct/aat?q=<QUERY>&maxRecords=4", "all": false},
+          "tgn": {"url": BCLUP_BASE+"/getty_direct/tgn?q=<QUERY>&maxRecords=4", "all": false},
+          "ulan": {"url": BCLUP_BASE+"/getty_direct/ulan?q=<QUERY>&maxRecords=4", "all": false},
+          "homosaurus": {"url": BCLUP_BASE+"/homosaurus_direct?q=<QUERY>&maxRecords=4", "all": false},
         }
       ]
     }

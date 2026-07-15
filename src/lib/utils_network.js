@@ -2516,7 +2516,7 @@ const utilsNetwork = {
     * @param {string} nameSearch - what kind of name search to do
     * @return {} -
     */
-    subjectSearch: async function(searchVal, complexVal, complexSub, mode){
+    subjectSearch: async function(searchVal, complexVal, complexSub, mode, nafSearchType = 'NAF Auth Names', gettySearchType = 'aat'){
       // subjectSearch: async function(searchVal, complexVal, mode){
       //encode the URLs
       searchVal = encodeURIComponent(searchVal)
@@ -2537,7 +2537,7 @@ const utilsNetwork = {
 
 
       this.subjectSearchActive = true
-      let namesUrl = useConfigStore().lookupConfig['http://preprod.id.loc.gov/authorities/names'].modes[0]['NAF Auth Names'].url.replace('<QUERY>',searchVal).replace('&count=30','&count='+numResultsNames).replace("<OFFSET>", "1")+'&keepdiacritics=true'
+      let namesUrl = useConfigStore().lookupConfig['http://preprod.id.loc.gov/authorities/names'].modes[0][nafSearchType].url.replace('<QUERY>',searchVal).replace('&count=30','&count='+numResultsNames).replace("<OFFSET>", "1")+'&keepdiacritics=true'
       let namesGeoUrl = useConfigStore().lookupConfig['http://preprod.id.loc.gov/authorities/names'].modes[0]['NAF Geographic'].url.replace('<QUERY>',searchVal).replace('&count=30','&count='+numResultsNames).replace("<OFFSET>", "1")+'&memberOf=http://id.loc.gov/authorities/names/collection_NamesAuthorizedHeadings&rdftype=Geographic&keepdiacritics=true'
       let namesUrlSubdivision = useConfigStore().lookupConfig['http://preprod.id.loc.gov/authorities/names'].modes[0]['NAF All'].url.replace('<QUERY>',searchVal).replace('&count=30','&count=5').replace("<OFFSET>", "1")+'&keepdiacritics=true&memberOf=http://id.loc.gov/authorities/subjects/collection_Subdivisions'
 
@@ -2576,7 +2576,7 @@ const utilsNetwork = {
 
       let subjectEntitiesUrl = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['ENTITIES'].url.replace('<QUERY>',searchVal).replace('&count=25','&count=50').replace("<OFFSET>", "1")
 
-      let bclupAatUrl = useConfigStore().lookupConfig[BCLUP_BASE].modes[0]['aat'].url.replace('<QUERY>', searchVal)
+      let bclupGettyUrl = useConfigStore().lookupConfig[BCLUP_BASE].modes[0][gettySearchType].url.replace('<QUERY>', searchVal)
       let bclupHomosaurusUrl = useConfigStore().lookupConfig[BCLUP_BASE].modes[0]['homosaurus'].url.replace('<QUERY>', searchVal)
 
       if (mode == 'GEO'){
@@ -2770,7 +2770,7 @@ const utilsNetwork = {
 
       let searchPayloadBclupGetty = {
         processor: 'bclupAPI',
-        url: [bclupAatUrl],
+        url: [bclupGettyUrl],
         searchValue: searchVal,
         subjectSearch: true,
         signal: this.controllers.controllerBclup.signal,
@@ -2877,16 +2877,23 @@ const utilsNetwork = {
         [resultsEntities] = await Promise.all([
             this.searchComplex(searchPayloadEntities)
         ]);
-      } else if (mode == "BCLUP") {
-        let [resultsAat, resultsHomosaurus] = await Promise.all([
+      } else if (mode == "BCLUP_GETTY") {
+        let [resultsGetty] = await Promise.all([
             this.searchComplex(searchPayloadBclupGetty),
+        ])
+        if (resultsGetty.length > 0 && resultsGetty.at(-1).literal) resultsGetty.pop()
+        if (resultsGetty.length > 10) resultsGetty = resultsGetty.slice(0, 10)
+        resultsGetty.forEach(r => { r.suggestLabel = r.label + ' [Getty ' + gettySearchType.toUpperCase() + ']' })
+        resultsBclup = [...resultsGetty]
+        resultsBclup.push({ label: searchVal, uri: null, literal: true, extra: '' })
+      } else if (mode == "BCLUP_HOMOSAURUS") {
+        let [resultsHomosaurus] = await Promise.all([
             this.searchComplex(searchPayloadBclupHomosaurus),
         ])
-        if (resultsAat.length > 0 && resultsAat.at(-1).literal) resultsAat.pop()
         if (resultsHomosaurus.length > 0 && resultsHomosaurus.at(-1).literal) resultsHomosaurus.pop()
-        resultsAat.forEach(r => { r.suggestLabel = r.label + ' [Getty AAT]' })
+        if (resultsHomosaurus.length > 10) resultsHomosaurus = resultsHomosaurus.slice(0, 10)
         resultsHomosaurus.forEach(r => { r.suggestLabel = r.label + ' [Homosaurus]' })
-        resultsBclup = [...resultsAat, ...resultsHomosaurus]
+        resultsBclup = [...resultsHomosaurus]
         resultsBclup.push({ label: searchVal, uri: null, literal: true, extra: '' })
       }
 
