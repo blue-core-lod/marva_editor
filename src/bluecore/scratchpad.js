@@ -110,39 +110,29 @@ function parseRecord(eId, xml) {
   return record
 }
 
-// Reopen a posted record as a fresh, unposted working copy.
-//
-// In native Marva, "Load from BFDB" pulls the published resource into a brand new
-// editing session with a new working id, so the original posted record is left
-// untouched and the edits become a new draft. There is no BFDB here, so replicate
-// that: clone the saved XML under a new eid with its status reset to "unposted",
-// leave the original entry alone, and return the eid to open. If the record was
-// not actually posted (or anything goes wrong) just return the original eid so it
-// continues editing in place.
-export function reopenPostedRecordLocal(eId) {
-  let xml = loadRecordLocal(eId)
-  if (!xml) return eId
-  try {
-    let doc = new DOMParser().parseFromString(xml, 'application/xml')
-    let dataset = doc.getElementsByTagNameNS('http://rdfs.org/ns/void#', 'DatasetDescription')[0]
-    let statusEl = dataset ? dataset.getElementsByTagNameNS(LCLOCAL_NS, 'status')[0] : null
+// Opens a saved local scratchpad record without cloning it.
+export function reopenFromLocalScratchpad(returnUrls, record, router) {
+  if (!isLocalScratchpad(returnUrls)) return false
 
-    // only fork records that were actually posted; otherwise keep the same draft
-    if (!statusEl || (statusEl.textContent || '').trim() !== 'published') return eId
+  let eId = record.eid || record.Id
+  router.push({ name: 'Edit', params: { recordId: eId } })
+  return true
+}
 
-    let newEid = 'e' + Date.now().toString()
+export function forkPublishedRecordOnSave(returnUrls, profile) {
+  if (!isLocalScratchpad(returnUrls) || !profile || profile.status !== 'published') return
 
-    let eidEl = dataset.getElementsByTagNameNS(LCLOCAL_NS, 'eid')[0]
-    if (eidEl) eidEl.textContent = newEid
-    statusEl.textContent = 'unposted'
+  let savedXml = loadRecordLocal(profile.eId)
+  if (!savedXml) return
 
-    let newXml = new XMLSerializer().serializeToString(doc)
-    if (!saveRecordLocal(newXml, newEid)) return eId
-    return newEid
-  } catch (err) {
-    console.error('Bluecore local scratch pad: could not fork posted record', eId, err)
-    return eId
-  }
+  let doc = new DOMParser().parseFromString(savedXml, 'application/xml')
+  let statusEl = doc.getElementsByTagNameNS(LCLOCAL_NS, 'status')[0]
+  let savedStatus = statusEl ? (statusEl.textContent || '').trim() : null
+
+  if (savedStatus !== 'published') return
+
+  profile.eId = 'e' + Date.now().toString()
+  profile.status = 'unposted'
 }
 
 // Stand-in for utilsNetwork.searchSavedRecords -- lists the locally saved

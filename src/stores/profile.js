@@ -11,7 +11,7 @@ import utilsParse from '@/lib/utils_parse';
 import utilsRDF from '@/lib/utils_rdf';
 import utilsExport from '@/lib/utils_export';
 import { parseDimensions } from '@/lib/parseDimensions';
-import { isLocalScratchpad, loadRecordLocal } from '@/bluecore/scratchpad';
+import { isLocalScratchpad, loadRecordLocal, forkPublishedRecordOnSave } from '@/bluecore/scratchpad'; //Bluecore Plugin
 
 // import utilsMisc from '@/lib/utils_misc';
 
@@ -3524,6 +3524,8 @@ export const useProfileStore = defineStore('profile', {
         * @return {boolean} - did it save
         */
         saveRecord: async function () {
+            forkPublishedRecordOnSave(useConfigStore().returnUrls, this.activeProfile) // Bluecore plugin for saving drafts from published records
+
             let xml = await utilsExport.buildXML(this.activeProfile)
             let saved = false
             if (!this.isTestEnv()) {  //Don't try to save if in test env
