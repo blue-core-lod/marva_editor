@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import utilsNetwork from '@/lib/utils_network';
 import scriptShifterLangCodes from '@/lib/scriptShifterLangCodes.json';
-import {bluecore, BCLUP_BASE} from '@/bluecore/environment';
+import bluecore from '@/bluecore/environment';
 
 export const useConfigStore = defineStore('config', {
   state: () => ({
@@ -878,20 +878,6 @@ export const useConfigStore = defineStore('config', {
           'Wikidata':{"url":"https://www.wikidata.org/w/api.php?action=wbsearchentities&search=<QUERY>&format=json&errorformat=plaintext&language=en&uselang=en&type=item&origin=*", "all":true},
 
 
-        }
-      ]
-    },
-
-    [BCLUP_BASE]: {
-      "name": "bclup",
-      "type": "complex",
-      "processor": "bclupAPI",
-      "modes": [
-        {
-          "aat": {"url": BCLUP_BASE+"/getty_direct/aat?q=<QUERY>&maxRecords=4", "all": false},
-          "tgn": {"url": BCLUP_BASE+"/getty_direct/tgn?q=<QUERY>&maxRecords=4", "all": false},
-          "ulan": {"url": BCLUP_BASE+"/getty_direct/ulan?q=<QUERY>&maxRecords=4", "all": false},
-          "homosaurus": {"url": BCLUP_BASE+"/homosaurus_direct?q=<QUERY>&maxRecords=4", "all": false},
         }
       ]
     }

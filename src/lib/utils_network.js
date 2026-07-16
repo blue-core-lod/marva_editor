@@ -1,7 +1,7 @@
 import {useConfigStore} from "../stores/config";
 import {usePreferenceStore} from "../stores/preference";
-import {BCLUP_BASE} from '@/bluecore/environment';
-import {applyBluecoreLookupRequest, addBluecoreHeaders} from "@/bluecore/utils";
+import {BCLUP_BASE, BCLUP_GETTY_MODE, BCLUP_HOMOSAURUS_MODE, BCLUP_SEARCH_MODES, BCLUP_PROCESSOR} from '@/bluecore/constants';
+import {applyBluecoreLookupRequest, addBluecoreHeaders, generateBclupResultEntry, generateSuggestLabelPostfix} from "@/bluecore/utils";
 import {isLocalScratchpad, saveRecordLocal, loadRecordLocal, searchSavedRecordsLocal} from "@/bluecore/scratchpad"; // Bluecore Plugins
 
 import short from 'short-uuid'
@@ -684,34 +684,13 @@ const utilsNetwork = {
                     extra: ''
                   })
                 }
-            } else if (Array.isArray(r) && r.length > 0 && searchPayload.processor == 'bclupAPI') {
-                for (const hit of r) {
-                  results.push({
-                    collections: [],
-                    label: hit.label,
-                    suggestLabel: hit.label,
-                    uri: hit.uri,
-                    literal: false,
-                    depreciated: false,
-                    extra: {
-                      rdftypes: ['Topic'],
-                      type: 'madsrdf:Topic',
-                      variantLabels: [],
-                      relateds: [],
-                      hasEarlierEstablishedForms: [],
-                      hasLaterEstablishedForms: [],
-                      broaders: [],
-                      collections: [],
-                    },
-                    total: r.length,
-                    bclup: true,
-                    undifferentiated: false,
-                    subdivision: false,
-                    count: 0,
-                  })
-                }
+            } else if (searchPayload.processor == BCLUP_PROCESSOR && Array.isArray(r) && r.length > 0){ {
+              let len = r.length
+              for (const hit of r) {
+                results.push(generateBclupResultEntry(hit, len))
+              }
             }
-
+          }
         }
 
         // always add in the literal they searched for at the end
@@ -2576,8 +2555,10 @@ const utilsNetwork = {
 
       let subjectEntitiesUrl = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['ENTITIES'].url.replace('<QUERY>',searchVal).replace('&count=25','&count=50').replace("<OFFSET>", "1")
 
-      let bclupGettyUrl = useConfigStore().lookupConfig[BCLUP_BASE].modes[0][gettySearchType].url.replace('<QUERY>', searchVal)
-      let bclupHomosaurusUrl = useConfigStore().lookupConfig[BCLUP_BASE].modes[0]['homosaurus'].url.replace('<QUERY>', searchVal)
+      let bclupUrls = {
+        [BCLUP_GETTY_MODE]: BCLUP_BASE + '/getty_direct/' + gettySearchType + '?q=' + searchVal,
+        [BCLUP_HOMOSAURUS_MODE]: BCLUP_BASE + '/homosaurus_direct?q=' + searchVal
+      }
 
       if (mode == 'GEO'){
         subjectUrlHierarchicalGeographic = subjectUrlHierarchicalGeographic.replace('&count=4','&count=12').replace("<OFFSET>", "1")
@@ -2768,20 +2749,15 @@ const utilsNetwork = {
         signal: this.controllers.controllerEntities.signal,
       }
 
-      let searchPayloadBclupGetty = {
-        processor: 'bclupAPI',
-        url: [bclupGettyUrl],
-        searchValue: searchVal,
-        subjectSearch: true,
-        signal: this.controllers.controllerBclup.signal,
-      }
-
-      let searchPayloadBclupHomosaurus = {
-        processor: 'bclupAPI',
-        url: [bclupHomosaurusUrl],
-        searchValue: searchVal,
-        subjectSearch: true,
-        signal: this.controllers.controllerBclup.signal,
+      let searchPayloadBclup = {}
+      for (const bclup_mode of BCLUP_SEARCH_MODES) {
+        searchPayloadBclup[bclup_mode] = {
+          processor: BCLUP_PROCESSOR,
+          url: [bclupUrls[bclup_mode]],
+          searchValue: searchVal,
+          subjectSearch: true,
+          signal: this.controllers.controllerBclup.signal,
+        }
       }
 
 
@@ -2877,24 +2853,18 @@ const utilsNetwork = {
         [resultsEntities] = await Promise.all([
             this.searchComplex(searchPayloadEntities)
         ]);
-      } else if (mode == "BCLUP_GETTY") {
-        let [resultsGetty] = await Promise.all([
-            this.searchComplex(searchPayloadBclupGetty),
-        ])
-        if (resultsGetty.length > 0 && resultsGetty.at(-1).literal) resultsGetty.pop()
-        if (resultsGetty.length > 10) resultsGetty = resultsGetty.slice(0, 10)
-        resultsGetty.forEach(r => { r.suggestLabel = r.label + ' [Getty ' + gettySearchType.toUpperCase() + ']' })
-        resultsBclup = [...resultsGetty]
-        resultsBclup.push({ label: searchVal, uri: null, literal: true, extra: '' })
-      } else if (mode == "BCLUP_HOMOSAURUS") {
-        let [resultsHomosaurus] = await Promise.all([
-            this.searchComplex(searchPayloadBclupHomosaurus),
-        ])
-        if (resultsHomosaurus.length > 0 && resultsHomosaurus.at(-1).literal) resultsHomosaurus.pop()
-        if (resultsHomosaurus.length > 10) resultsHomosaurus = resultsHomosaurus.slice(0, 10)
-        resultsHomosaurus.forEach(r => { r.suggestLabel = r.label + ' [Homosaurus]' })
-        resultsBclup = [...resultsHomosaurus]
-        resultsBclup.push({ label: searchVal, uri: null, literal: true, extra: '' })
+      } else {
+        for (const bclup_mode of BCLUP_SEARCH_MODES) {
+          if (mode == bclup_mode) {
+            [resultsBclup] = await Promise.all([
+              this.searchComplex(searchPayloadBclup[mode]),
+            ])
+            if (resultsBclup.length > 0 && resultsBclup.at(-1).literal) resultsBclup.pop()
+            if (resultsBclup.length > 10) resultsBclup = resultsBclup.slice(0, 10)
+            resultsBclup.forEach(r => { r.suggestLabel = r.label + generateSuggestLabelPostfix(mode, gettySearchType) })
+            resultsBclup.push({ label: searchVal, uri: null, literal: true, extra: '' })
+          }
+        }
       }
 
       // drop the litearl value from names and complex

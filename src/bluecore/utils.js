@@ -4,6 +4,9 @@
 // ## Blue Core specific utility functions will be used  here.                ##
 // #############################################################################
 
+import short from 'short-uuid'
+import { BCLUP_GETTY_MODE, BCLUP_HOMOSAURUS_MODE, BCLUP_SOURCE, NS_BF_SOURCE, NS_RDF_LABEL } from '@/bluecore/constants';
+
 // Base URL for Bluecore API calls
 const bluecoreApiBase = import.meta.env.VITE_BLUECORE_API_PATH.replace(/\/+$/, '')
 // UUID matcher used for UUID input
@@ -95,4 +98,62 @@ export function applyBluecoreLookupRequest(url, options = {}) {
   const requestOptions = isInstancePath ? addBluecoreHeaders(options, { headers: { Accept: 'application/cbd+xml, application/json, */*;q=0.8' } }) : options
 
   return { url: resolvedUrl, options: requestOptions, cbd: isInstancePath }
+}
+
+export function generateBclupResultEntry(hit, length) {
+  return {
+    collections: [],
+    label: hit.label,
+    suggestLabel: hit.label,
+    uri: hit.uri,
+    literal: false,
+    depreciated: false,
+    extra: {
+      rdftypes: ['Topic'],
+      type: 'madsrdf:Topic',
+      variantLabels: [],
+      relateds: [],
+      hasEarlierEstablishedForms: [],
+      hasLaterEstablishedForms: [],
+      broaders: [],
+      collections: [],
+    },
+    total: length,
+    bclup: true,
+    undifferentiated: false,
+    subdivision: false,
+    count: 0,
+  }
+}
+
+export function generateSuggestLabelPostfix(mode, gettySearchType = '') {
+  if (mode == BCLUP_GETTY_MODE) {
+    return ' [Getty ' + gettySearchType.toUpperCase() + ']'
+  } else if (mode == BCLUP_HOMOSAURUS_MODE) {
+    return ' [Homosaurus]'
+  }
+  return ''
+}
+
+// Change source from lc if user clicked bcl-up entry
+export function handleBclupSource(h, currentUserValuePos) {
+  for (const source of BCLUP_SOURCE) {
+    if (h['uri'] && h['uri'].indexOf(source['prefix']) > -1) {
+      currentUserValuePos[NS_BF_SOURCE] = [
+        {
+          "@guid": short.generate(),
+          "@type": NS_BF_SOURCE,
+          "@id": source['uri'],
+          [NS_RDF_LABEL]: [
+            {
+              "@guid": short.generate(),
+              [NS_RDF_LABEL]: source['label']
+            }
+          ]
+        }
+    ]
+      return true
+    }
+  }
+  return false
 }
