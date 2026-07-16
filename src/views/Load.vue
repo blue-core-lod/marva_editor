@@ -409,7 +409,8 @@ import Nav from "@/components/panels/nav/Nav.vue";
 import utilsProfile from '@/lib/utils_profile';
 import utilsNetwork from '@/lib/utils_network';
 import utilsParse from '@/lib/utils_parse';
-import { isBluecoreUuidInput, startBluecoreResourceAutoLoad } from '@/bluecore/utils';
+import { isBluecoreUuidInput, startBluecoreResourceAutoLoad } from '@/bluecore/utils'; //Bluecore Plugin
+import { reopenFromLocalScratchpad } from '@/bluecore/scratchpad'; // Bluecore Plugin
 import short from 'short-uuid'
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en'
@@ -802,6 +803,8 @@ export default {
     },
 
     reloadRecord: function(record){
+      if (reopenFromLocalScratchpad(useConfigStore().returnUrls, record, this.$router)) return // Bluecore plugin for scratchpad
+
       let url
       let profile
 
