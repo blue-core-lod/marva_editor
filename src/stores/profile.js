@@ -12,6 +12,7 @@ import utilsRDF from '@/lib/utils_rdf';
 import utilsExport from '@/lib/utils_export';
 import { parseDimensions } from '@/lib/parseDimensions';
 import { isLocalScratchpad, loadRecordLocal, forkPublishedRecordOnSave } from '@/bluecore/scratchpad'; //Bluecore Plugin
+import { handleBclupSource } from '@/bluecore/utils';
 
 // import utilsMisc from '@/lib/utils_misc';
 
@@ -3367,6 +3368,8 @@ export const useProfileStore = defineStore('profile', {
                             ]
                         }
                         break
+                    } else if (handleBclupSource(h, currentUserValuePos)) {
+                      break
                     }
 
                 }
