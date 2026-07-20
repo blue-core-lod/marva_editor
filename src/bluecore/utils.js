@@ -5,7 +5,7 @@
 // #############################################################################
 
 import short from 'short-uuid'
-import { BCLUP_BASE, BCLUP_GETTY_MODE, BCLUP_HOMOSAURUS_MODE, BCLUP_SOURCE, NS_BF_SOURCE, NS_RDF_LABEL } from '@/bluecore/constants';
+import { BCLUP_BASE, BCLUP_GETTY_MODE, BCLUP_HOMOSAURUS_MODE, BCLUP_SEARCH_MODES, BCLUP_SOURCE, NS_BF_SOURCE, NS_RDF_LABEL } from '@/bluecore/constants';
 
 // Base URL for Bluecore API calls
 const bluecoreApiBase = import.meta.env.VITE_BLUECORE_API_PATH.replace(/\/+$/, '')
@@ -147,7 +147,7 @@ export function generateSuggestLabelPostfix(mode, gettySearchType = '') {
 }
 
 export function isBclupMode(mode) {
-  return mode == BCLUP_GETTY_MODE || mode == BCLUP_HOMOSAURUS_MODE
+  return BCLUP_SEARCH_MODES.includes(mode)
 }
 
 export function isBclupSource(uri) {
