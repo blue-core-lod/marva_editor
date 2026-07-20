@@ -233,7 +233,7 @@ export function handleBclupSource(h, currentUserValuePos) {
       currentUserValuePos[NS_BF_SOURCE] = [
         {
           "@guid": short.generate(),
-          "@type": NS_BF_SOURCE,
+          "@type": "http://id.loc.gov/ontologies/bibframe/Source",
           "@id": source['uri'],
           [NS_RDF_LABEL]: [
             {
