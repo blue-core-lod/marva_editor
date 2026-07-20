@@ -11,6 +11,12 @@
             <button @click="setNafSearch('geo')" :class="[{ 'active': (nafSearch === 'geo') }]">geo</button>
             <button @click="setNafSearch('all')" :class="[{ 'active': (nafSearch === 'all') }]">all</button>
         </span>
+        <span id="search-in-holder" v-if="label == 'Getty' && searchMode == 'BCLUP_GETTY'">
+            &nbsp;
+            <button @click="setGettySearch('aat')" :class="[{ 'active': (gettySearchType === 'aat') }]">aat</button>
+            <button @click="setGettySearch('tgn')" :class="[{ 'active': (gettySearchType === 'tgn') }]">tgn</button>
+            <button @click="setGettySearch('ulan')" :class="[{ 'active': (gettySearchType === 'ulan') }]">ulan</button>
+        </span>
         <div v-for="(value, ix) in searchResults[searchType]" @click="$emit('selectContext', calculateIndex(ix))"
             @mouseover="setPickPosition(calculateIndex(ix))" :data-id="calculateIndex(ix)" :key="value.uri"
             :class="['fake-option', {'not-usable': !checkIsUsable(value), 'unselected': (pickPostion != calculateIndex(ix)), 'selected': (pickPostion == calculateIndex(ix)), 'picked': (pickLookup[calculateIndex(ix)] && pickLookup[calculateIndex(ix)].picked) }]">
@@ -62,7 +68,11 @@ export default {
         index: String,
         searchResults: Object,
         pickLookup: Object,
-        searchMode: String
+        searchMode: String,
+        gettySearchType: {
+            type: String,
+            default: 'aat',
+        }
 
     },
 
@@ -97,6 +107,10 @@ export default {
 
 
             this.$emit('nafSearch', searchMap[searchType])
+        },
+
+        setGettySearch: function(searchType){
+            this.$emit('lookupSearch', searchType)
         },
 
         checkFromRda: function (data) {

@@ -11,8 +11,9 @@ import utilsParse from '@/lib/utils_parse';
 import utilsRDF from '@/lib/utils_rdf';
 import utilsExport from '@/lib/utils_export';
 import { parseDimensions } from '@/lib/parseDimensions';
+import { NS_BF_SOURCE } from '@/bluecore/constants';
 import { isLocalScratchpad, loadRecordLocal, forkPublishedRecordOnSave } from '@/bluecore/scratchpad'; //Bluecore Plugin
-import { handleBclupSource } from '@/bluecore/utils';
+import { handleBclupSource, isBclupSource, updateBclupSourceInProfile } from '@/bluecore/utils';
 
 // import utilsMisc from '@/lib/utils_misc';
 
@@ -670,7 +671,6 @@ export const useProfileStore = defineStore('profile', {
                 }
             }
 
-
             let profileData;
             try {
                 let response = await fetch(profilesURL);
@@ -781,6 +781,11 @@ export const useProfileStore = defineStore('profile', {
 
                     // modify the subject headings to match the new editor
                     if (rt.id == 'lc:RT:bf2:Components') {
+                        for (let pt of rt.propertyTemplates) {
+                          if (pt.propertyURI == NS_BF_SOURCE) {
+                            updateBclupSourceInProfile(pt.valueConstraint);
+                          }
+                        }
                         for (let pt of rt.propertyTemplates) {
                             pt.valueConstraint.valueTemplateRefs = pt.valueConstraint.valueTemplateRefs.filter((ref) => { if (ref == 'lc:RT:bf2:Topic:madsTopic') { return true } })
                         }
@@ -3171,6 +3176,10 @@ export const useProfileStore = defineStore('profile', {
                     // it might be a literal.
                     if (subjectComponents[0].uri) {
                         currentUserValuePos['@id'] = subjectComponents[0].uri
+                        // should we add different isMemberOfMADSScheme for BCLUP sources?
+                        if (isBclupSource(subjectComponents[0].uri)) {
+                          delete currentUserValuePos["http://www.loc.gov/mads/rdf/v1#isMemberOfMADSScheme"]
+                        }
                     } else {
                         delete currentUserValuePos["http://www.loc.gov/mads/rdf/v1#isMemberOfMADSScheme"]
                     }

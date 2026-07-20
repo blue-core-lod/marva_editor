@@ -782,8 +782,8 @@ import utilsNetwork from '@/lib/utils_network';
 import { subjectSearchWithBclup } from '@/bluecore/utils'
 
 import { AccordionList, AccordionItem } from "vue3-rich-accordion";
-import DetailsPanel from '@/bluecore/components/subject_editor/BluecoreDetailsPanel.vue'
-import ComplexSearchResultsDisplay from '@/bluecore/components/subject_editor/BluecoreComplexSearchResultsDisplay.vue'
+import DetailsPanel from './helpers/DetailsPanel.vue'
+import ComplexSearchResultsDisplay from './helpers/ComplexSearchResultsDisplay.vue'
 
 const debounce = (callback, wait) => {
   let timeoutId = null;
