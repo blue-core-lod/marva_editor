@@ -74,10 +74,10 @@ export default {
                 this.displayLabel = cache
 
               }else{
-                let returnUrls = useConfigStore().returnUrls
-                if (returnUrls.env == "production"){
-                  URL = URL.replace("//id.", "//preprod-8080.id.")
-                }
+                // let returnUrls = useConfigStore().returnUrls
+                // if (returnUrls.env == "production"){
+                //   URL = URL.replace("//id.", "//preprod-8080.id.")
+                // }
                 fetch(URL, {method: 'HEAD' }).then(
                   (response) => {
                       // console.log('fetching label for URI: ' + this.URI)

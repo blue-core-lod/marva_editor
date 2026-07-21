@@ -100,17 +100,6 @@ export function applyBluecoreLookupRequest(url, options = {}) {
   return { url: resolvedUrl, options: requestOptions, cbd: isInstancePath }
 }
 
-export function updateBclupSourceInProfile(valueConstraint) {
-  for (const source of BCLUP_SOURCE) {
-    if (!valueConstraint.defaults.some((d) => d.defaultURI === source.uri)) {
-      valueConstraint.defaults.push({
-        defaultLiteral: source.label,
-        defaultURI: source.uri
-      });
-    }
-  }
-}
-
 export function generateBclupResultEntry(hit, length) {
   return {
     collections: [],
