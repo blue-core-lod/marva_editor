@@ -93,6 +93,21 @@
                 @emitLoadContext="loadContext"
                 :searchMode="searchMode"
             />
+
+            <!-- BLUECORE update start -->
+            <SearchResultOption
+                searchType="bclup"
+                :label="searchMode == 'BCLUP_HOMOSAURUS' ? 'Homosaurus' : 'Getty'"
+                index="ix"
+                :searchResults="searchResults"
+                :pickLookup="pickLookup"
+                @selectContext="selectContext"
+                @emitLoadContext="loadContext"
+                :searchMode="searchMode"
+                :gettySearchType="gettySearchType"
+                @lookupSearch="lookupSearch"
+            />
+            <!-- BLUECORE update end -->
         </div>
     </div>
 </template>
@@ -141,6 +156,12 @@ export default {
         searchResults: Object,
         pickLookup: Object,
         searchMode: String,
+        // BLUECORE update start
+        gettySearchType: {
+            type: String,
+            default: 'aat',
+        },
+        // BLUECORE update end
     },
 
     watch: {},
@@ -167,6 +188,12 @@ export default {
         nafSearch: function(type){
             this.$emit('nafSearch', type)
         },
+
+        // BLUECORE update start
+        lookupSearch: function(type){
+            this.$emit('lookupSearch', type)
+        },
+        // BLUECORE update end
 
         loadContext:function(pickPosition){
             if (this.pickCurrent == null) {

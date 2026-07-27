@@ -81,36 +81,48 @@
 
             <div :style="`${this.preferenceStore.styleModalBackgroundColor()};`"
               :class="['subject-editor-container-left', { 'subject-editor-container-left-lowres': lowResMode }]">
-
-              <div id="search-in-holder" style="position: absolute; top:0">
-                <span>Search In:</span>
-
-
-                <button @click="searchModeSwitch('LCSHNAF')" :data-tooltip="'Shortcut: CTRL+ALT+1'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'LCSHNAF') }]">LCSH/NAF</button>
-                <button @click="searchModeSwitch('CHILD')" :data-tooltip="'Shortcut: CTRL+ALT+2'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'CHILD') }]">Children's
-                  Subjects</button>
-                <button @click="searchModeSwitch('GEO')" :data-tooltip="'Shortcut: CTRL+ALT+3'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'GEO') }]">Geo. Subdiv.</button>
-                <!-- <button @click="searchModeSwitch('WORKS')" :data-tooltip="'Shortcut: CTRL+ALT+4'" :class="['simptip-position-bottom',{'active':(searchMode==='WORKS')}]">Works</button> -->
-                <button @click="searchModeSwitch('HUBS')" :data-tooltip="'Shortcut: CTRL+ALT+4'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'HUBS') }]">Hubs</button>
-                <button @click="searchModeSwitch('ENTITIES')" :data-tooltip="'Shortcut: CTRL+ALT+5'"
-                  :class="['simptip-position-bottom', { 'active': (searchMode === 'ENTITIES') }]" v-if="configStore.returnUrls.env == 'staging'">Entities</button>
-              </div>
-
-
+              <!-- BLUECORE update start - implement BCL-UP buttons and make the buttons respoinsive -->
               <div
                 :style="`flex:1; align-self: flex-end; height: 95%; ${this.preferenceStore.styleModalBackgroundColor()}`"
-                :class="{ 'scroll-all': preferenceStore.returnValue('--b-edit-complex-scroll-all') && !preferenceStore.returnValue('--b-edit-complex-scroll-independently') }">
+                :class="['subject-search-column', { 'scroll-all': preferenceStore.returnValue('--b-edit-complex-scroll-all') && !preferenceStore.returnValue('--b-edit-complex-scroll-independently') }]">
+                <div id="search-in-holder">
+                  <span>Search In:</span>
+                  <div class="subject-search-mode-buttons">
+                    <button @click="searchModeSwitch('LCSHNAF')" :data-tooltip="'Shortcut: CTRL+ALT+1'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'LCSHNAF') }]">LCSH/NAF</button>
+                    <button @click="searchModeSwitch('CHILD')" :data-tooltip="'Shortcut: CTRL+ALT+2'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'CHILD') }]">Children's
+                      Subjects</button>
+                    <button @click="searchModeSwitch('GEO')" :data-tooltip="'Shortcut: CTRL+ALT+3'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'GEO') }]">Geo. Subdiv.</button>
+                    <!-- <button @click="searchModeSwitch('WORKS')" :data-tooltip="'Shortcut: CTRL+ALT+4'" :class="['simptip-position-bottom',{'active':(searchMode==='WORKS')}]">Works</button> -->
+                    <button @click="searchModeSwitch('HUBS')" :data-tooltip="'Shortcut: CTRL+ALT+4'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'HUBS') }]">Hubs</button>
+                    <button @click="searchModeSwitch('ENTITIES')" :data-tooltip="'Shortcut: CTRL+ALT+5'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'ENTITIES') }]" v-if="configStore.returnUrls.env == 'staging'">Entities</button>
+                    <!--
+                    <button @click="searchModeSwitch('BCLUP_FAST')" :data-tooltip="'Shortcut: CTRL+ALT+6'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP_FAST') }]">FAST</button>
+                    -->
+                    <button @click="searchModeSwitch('BCLUP_GETTY')" :data-tooltip="'Shortcut: CTRL+ALT+7'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP_GETTY') }]">Getty</button>
+                    <button @click="searchModeSwitch('BCLUP_HOMOSAURUS')" :data-tooltip="'Shortcut: CTRL+ALT+8'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP_HOMOSAURUS') }]">Homosaurus</button>
+                    <!--
+                    <button @click="searchModeSwitch('BCLUP_MESH')" :data-tooltip="'Shortcut: CTRL+ALT+9'"
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP_MESH') }]">MESH</button>
+                    -->
+                  </div>
+                </div>
                 <div v-if="activeSearch !== false">{{ activeSearch }}</div>
-                <div v-if="searchResults !== null" style="height: 100%">
+                <div v-if="searchResults !== null" class="subject-search-results">
                   <ComplexSearchResultsDisplay :searchResults="searchResults" :pickLookup="pickLookup"
-                    :searchMode="searchMode" @loadContext="loadContext" @selectContext="selectContext" @nafSearch="nafSearch"/>
+                    :searchMode="searchMode" :gettySearchType="gettySearchType" @loadContext="loadContext" @selectContext="selectContext"
+                    @nafSearch="nafSearch" @lookupSearch="lookupSearch"/>
 
                 </div>
               </div>
+              <!-- BLUECORE update end -->
 
               <!-- Results Panel -->
               <DetailsPanel :contextData="contextData" :contextRequestInProgress="contextRequestInProgress"
@@ -341,6 +353,22 @@ body #app {
   overflow-y: hidden;
 }
 
+/* BLUECORE update start - implement BCL-UP buttons and make the buttons respoinsive */
+.subject-search-column {
+  flex: 1;
+  align-self: flex-end;
+  height: 95%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.subject-search-results {
+  flex: 1;
+  min-height: 0;
+}
+/* BLUECORE update end */
+
 .subject-editor-container-left-lowres {
   font-size: 0.75em !important;
   height: 352px;
@@ -545,6 +573,23 @@ body #app {
   border: solid 1px #c1c1c1;
 }
 
+/* BLUECORE update start - implement BCL-UP buttons and make the buttons respoinsive */
+#search-in-holder {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35em;
+  padding-bottom: 0.5em;
+}
+
+.subject-search-mode-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  width: 100%;
+}
+/* BLUECORE update end */
+
 #search-in-holder .active {
   background-color: whitesmoke;
   -webkit-box-shadow: inset 0px 0px 5px #c1c1c1;
@@ -740,6 +785,11 @@ import short from 'short-uuid'
 import AuthTypeIcon from "@/components/panels/edit/fields/helpers/AuthTypeIcon.vue";
 
 import utilsNetwork from '@/lib/utils_network';
+// BLUECORE update start
+// use the new subjectSearchWithBclup function for searching subjects with BCL-UP integration
+// subjectSearchWithBclup calls subjectSearch for non-bcl-up searches.
+import { subjectSearchWithBclup } from '@/bluecore/utils'
+// BLUECORE update end
 
 import { AccordionList, AccordionItem } from "vue3-rich-accordion";
 import DetailsPanel from './helpers/DetailsPanel.vue'
@@ -805,6 +855,9 @@ export default {
       activeSearch: false,
 
       nafSearchType: 'NAF Auth Names',
+      // BLUECORE update start - make aat default search type for Getty search
+      gettySearchType: 'aat',
+      // BLUECORE update end
 
       pickPostion: 0,
       pickLookup: {},
@@ -1561,6 +1614,12 @@ export default {
         this.pickLookup[x] = this.searchResults.entities[x]
 
       }
+
+      // BLUECORE update start
+      for (let x in this.searchResults.bclup) {
+        this.pickLookup[x] = this.searchResults.bclup[x]
+      }
+      // BLUECORE update end
     },
 
     // some context messing here, pass the debounce func a ref to the vue "this" as that to ref in the function callback
@@ -1615,7 +1674,16 @@ export default {
       }
 
       if (searchString.length > 2){
-        that.searchResults = await utilsNetwork.subjectSearch(searchString, searchStringFull, complexSub, that.searchMode, that.nafSearchType)
+        // BLUECORE update start - use subjectSearchWithBclup
+        that.searchResults = await subjectSearchWithBclup(
+          utilsNetwork,
+          searchString,
+          searchStringFull,
+          complexSub,
+          that.searchMode,
+          that.gettySearchType
+        )
+        // BLUECORE update end
       } else {
         return
       }
@@ -1655,6 +1723,12 @@ export default {
 	  for (let s of that.searchResults.entities){
 		s.entity = true
 	  }
+
+      // BLUECORE update start
+      for (let s of that.searchResults.bclup) {
+        s.bclup = true
+      }
+      // BLUECORE update end
 
       for (let s of that.searchResults.subjectsSimple) {
         if (s.suggestLabel && s.suggestLabel.includes('(DEPRECATED')) {
@@ -2062,6 +2136,20 @@ export default {
       this.buildPickLookup()
     },
 
+    // BLUECORE update start
+    lookupSearch: async function(type){
+      if (this.searchMode !== 'BCLUP_GETTY') {
+        return
+      }
+
+      this.gettySearchType = type
+
+      if (this.activeComponent && this.activeComponent.label) {
+        this.searchApis(this.activeComponent.label, this.subjectString, this)
+      }
+    },
+    // BLUECORE update end
+
     selectContext: async function (pickPostion, update = true) {
       if (pickPostion != null) {
         this.pickPostion = pickPostion
@@ -2354,6 +2442,12 @@ export default {
         this.searchModeSwitch("HUBS")
       } else if (event.ctrlKey && event.altKey && event.key == "5") {
         this.searchModeSwitch("ENTITIES")
+      // BLUECORE update start
+      } else if (event.ctrlKey && event.altKey && event.key == "7") {
+        this.searchModeSwitch("BCLUP_GETTY")
+      } else if (event.ctrlKey && event.altKey && event.key == "8") {
+        this.searchModeSwitch("BCLUP_HOMOSAURUS")
+      // BLUECORE update end
       } else if ((this.searchMode == 'GEO' || this.searchMode == 'ENTITIES') && event.key == "-") {
         if (this.components.length > 0) {
           let lastC = this.components[this.components.length - 1]
@@ -3004,6 +3098,10 @@ export default {
 
     cleanState: function () {
       this.searchMode = "LCSHNAF"
+      // BLUECORE udpate start
+      this.nafSearchType = 'NAF Auth Names'
+      this.gettySearchType = 'aat'
+      // BLUECORE udpate end
       this.components = []
       this.lookup = {}
       this.searchResults = null

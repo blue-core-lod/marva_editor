@@ -36,8 +36,10 @@
                 <a class="edit-hub" v-if="contextData.uri.includes('/hubs/') && checkLcOnly()" :href="editHub(contextData.uri)" target="_blank">Edit</a>
                 <br>
             </template>
+            <!-- BLUECORE update start -->
             <a style="color:#2c3e50" :href="rewriteURI(contextData.uri)" target="_blank"
-                v-if="contextData.literal != true">view on id.loc.gov</a>
+                v-if="contextData.literal != true">{{ getContextLinkLabel(contextData.uri) }}</a>
+            <!-- BLUECORE update end -->
             <!-- Dates -->
             <template v-if="(Object.keys(contextData).includes('birthdates') && contextData['birthdates'].length > 0)
                 || (Object.keys(contextData).includes('deathdates') && contextData['deathdates'].length > 0)">
@@ -424,6 +426,17 @@ export default {
 
             return uri
         },
+        // BLUECORE update start
+        getContextLinkLabel: function (uri) {
+            let rewrittenUri = this.rewriteURI(uri)
+
+            if (rewrittenUri && rewrittenUri.includes('id.loc.gov')) {
+                return 'view on id.loc.gov'
+            }
+
+            return 'view full description'
+        },
+        // BLUECORE update end
     },
 
     created: function () { },

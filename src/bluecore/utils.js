@@ -4,6 +4,9 @@
 // ## Blue Core specific utility functions will be used  here.                ##
 // #############################################################################
 
+import short from 'short-uuid'
+import { BCLUP_BASE, BCLUP_GETTY_MODE, BCLUP_HOMOSAURUS_MODE, BCLUP_SEARCH_MODES, BCLUP_SOURCE, NS_BF_SOURCE, NS_RDF_LABEL } from '@/bluecore/constants';
+
 // Base URL for Bluecore API calls
 const bluecoreApiBase = import.meta.env.VITE_BLUECORE_API_PATH.replace(/\/+$/, '')
 // UUID matcher used for UUID input
@@ -95,4 +98,142 @@ export function applyBluecoreLookupRequest(url, options = {}) {
   const requestOptions = isInstancePath ? addBluecoreHeaders(options, { headers: { Accept: 'application/cbd+xml, application/json, */*;q=0.8' } }) : options
 
   return { url: resolvedUrl, options: requestOptions, cbd: isInstancePath }
+}
+
+export function generateBclupResultEntry(hit, length) {
+  return {
+    collections: [],
+    label: hit.label,
+    suggestLabel: hit.label,
+    uri: hit.uri,
+    literal: false,
+    depreciated: false,
+    extra: {
+      rdftypes: ['Topic'],
+      type: 'madsrdf:Topic',
+      variantLabels: [],
+      relateds: [],
+      hasEarlierEstablishedForms: [],
+      hasLaterEstablishedForms: [],
+      broaders: [],
+      collections: [],
+    },
+    total: length,
+    bclup: true,
+    undifferentiated: false,
+    subdivision: false,
+    count: 0,
+  }
+}
+
+export function generateSuggestLabelPostfix(mode, gettySearchType = '') {
+  if (mode == BCLUP_GETTY_MODE) {
+    return ' [Getty ' + gettySearchType.toUpperCase() + ']'
+  } else if (mode == BCLUP_HOMOSAURUS_MODE) {
+    return ' [Homosaurus]'
+  }
+  return ''
+}
+
+export function isBclupMode(mode) {
+  return BCLUP_SEARCH_MODES.includes(mode)
+}
+
+export function isBclupSource(uri) {
+  if (!uri || typeof uri !== 'string') return false
+  for (const source of BCLUP_SOURCE) {
+    if (uri.indexOf(source.prefix) > -1) {
+      return true
+    }
+  }
+  return false
+}
+
+export function buildEmptySubjectSearchResults() {
+  return {
+    names: [],
+    subjectsSimple: [],
+    subjectsComplex: [],
+    subjectsChildren: [],
+    subjectsChildrenComplex: [],
+    hierarchicalGeographic: [],
+    exact: [],
+    entities: [],
+    bclup: [],
+  }
+}
+
+async function fetchBclupHits(searchVal, mode, gettySearchType = 'aat') {
+  const encodedSearchVal = encodeURIComponent(searchVal)
+  const urlsByMode = {
+    [BCLUP_GETTY_MODE]: BCLUP_BASE + '/getty_direct/' + gettySearchType + '?q=' + encodedSearchVal,
+    [BCLUP_HOMOSAURUS_MODE]: BCLUP_BASE + '/homosaurus_direct?q=' + encodedSearchVal,
+  }
+
+  const targetUrl = urlsByMode[mode]
+  if (!targetUrl) return []
+
+  try {
+    const response = await fetch(targetUrl, { method: 'GET' })
+    if (!response.ok) return []
+
+    const payload = await response.json()
+    if (!Array.isArray(payload)) return []
+
+    const hits = payload
+      .filter((hit) => hit && typeof hit.label == 'string' && typeof hit.uri == 'string')
+      .slice(0, 10)
+
+    const count = hits.length
+    const mapped = hits.map((hit) => {
+      const result = generateBclupResultEntry(hit, count)
+      result.suggestLabel = result.label + generateSuggestLabelPostfix(mode, gettySearchType)
+      return result
+    })
+
+    if (searchVal && searchVal.length > 0) {
+      mapped.push({ label: searchVal, uri: null, literal: true, extra: '' })
+    }
+
+    return mapped
+  } catch (error) {
+    return []
+  }
+}
+
+export async function subjectSearchWithBclup(utilsNetwork, searchVal, complexVal, complexSub, mode, gettySearchType = 'aat') {
+  if (!isBclupMode(mode)) {
+    const results = await utilsNetwork.subjectSearch(searchVal, complexVal, complexSub, mode)
+    if (!Object.prototype.hasOwnProperty.call(results, 'bclup')) {
+      results.bclup = []
+    }
+    return results
+  }
+
+  const results = buildEmptySubjectSearchResults()
+  results.bclup = await fetchBclupHits(searchVal, mode, gettySearchType)
+  return results
+}
+
+// Change source from lc if user clicked bcl-up entry
+export function handleBclupSource(h, currentUserValuePos) {
+  for (const source of BCLUP_SOURCE) {
+    if (h['uri'] && h['uri'].indexOf(source['prefix']) > -1) {
+      currentUserValuePos[NS_BF_SOURCE] = [
+        {
+          "@guid": short.generate(),
+          "@type": "http://id.loc.gov/ontologies/bibframe/Source",
+          "@id": source['uri'],
+          [NS_RDF_LABEL]: [
+            {
+              "@guid": short.generate(),
+              [NS_RDF_LABEL]: source['label']
+            }
+          ]
+        }
+    ]
+      return true
+    }
+  }
+  return false
 }
