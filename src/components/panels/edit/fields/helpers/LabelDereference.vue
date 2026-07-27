@@ -74,10 +74,14 @@ export default {
                 this.displayLabel = cache
 
               }else{
+                // BLUECORE update start
+                // When the app is running in production, it translates the id.loc.gov URL to the preprod-8080.id.loc.gov URL for fetching the label.
+                // Bluecore server may not have access to preprod-8080.id.loc.gov, so we need to request id.loc.gov directly for fetching the label.
                 // let returnUrls = useConfigStore().returnUrls
                 // if (returnUrls.env == "production"){
                 //   URL = URL.replace("//id.", "//preprod-8080.id.")
                 // }
+                // BLUECORE update end
                 fetch(URL, {method: 'HEAD' }).then(
                   (response) => {
                       // console.log('fetching label for URI: ' + this.URI)

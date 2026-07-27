@@ -11,9 +11,11 @@ import utilsParse from '@/lib/utils_parse';
 import utilsRDF from '@/lib/utils_rdf';
 import utilsExport from '@/lib/utils_export';
 import { parseDimensions } from '@/lib/parseDimensions';
+// BLUECORE update start
 import { NS_BF_SOURCE } from '@/bluecore/constants';
 import { isLocalScratchpad, loadRecordLocal, forkPublishedRecordOnSave } from '@/bluecore/scratchpad'; //Bluecore Plugin
 import { handleBclupSource, isBclupSource } from '@/bluecore/utils';
+// BLUECORE update end
 
 // import utilsMisc from '@/lib/utils_misc';
 
@@ -670,6 +672,7 @@ export const useProfileStore = defineStore('profile', {
 
                 }
             }
+
 
             let profileData;
             try {
@@ -3171,10 +3174,12 @@ export const useProfileStore = defineStore('profile', {
                     // it might be a literal.
                     if (subjectComponents[0].uri) {
                         currentUserValuePos['@id'] = subjectComponents[0].uri
-                        // should we add different isMemberOfMADSScheme for BCLUP sources?
+                        // BLUECORE update start
+                        // Should we add different isMemberOfMADSScheme for BCLUP sources?
                         if (isBclupSource(subjectComponents[0].uri)) {
                           delete currentUserValuePos["http://www.loc.gov/mads/rdf/v1#isMemberOfMADSScheme"]
                         }
+                        // BLUECORE update end
                     } else {
                         delete currentUserValuePos["http://www.loc.gov/mads/rdf/v1#isMemberOfMADSScheme"]
                     }
@@ -3372,8 +3377,10 @@ export const useProfileStore = defineStore('profile', {
                             ]
                         }
                         break
+                    // BLUECORE update start
                     } else if (handleBclupSource(h, currentUserValuePos)) {
                       break
+                    // BLUECORE update end
                     }
 
                 }

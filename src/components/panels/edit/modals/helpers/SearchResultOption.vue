@@ -11,12 +11,14 @@
             <button @click="setNafSearch('geo')" :class="[{ 'active': (nafSearch === 'geo') }]">geo</button>
             <button @click="setNafSearch('all')" :class="[{ 'active': (nafSearch === 'all') }]">all</button>
         </span>
+        <!-- BLUECORE update start -->
         <span id="search-in-holder" v-if="label == 'Getty' && searchMode == 'BCLUP_GETTY'">
             &nbsp;
             <button @click="setGettySearch('aat')" :class="[{ 'active': (gettySearchType === 'aat') }]">aat</button>
             <button @click="setGettySearch('tgn')" :class="[{ 'active': (gettySearchType === 'tgn') }]">tgn</button>
             <button @click="setGettySearch('ulan')" :class="[{ 'active': (gettySearchType === 'ulan') }]">ulan</button>
         </span>
+        <!-- BLUECORE update end -->
         <div v-for="(value, ix) in searchResults[searchType]" @click="$emit('selectContext', calculateIndex(ix))"
             @mouseover="setPickPosition(calculateIndex(ix))" :data-id="calculateIndex(ix)" :key="value.uri"
             :class="['fake-option', {'not-usable': !checkIsUsable(value), 'unselected': (pickPostion != calculateIndex(ix)), 'selected': (pickPostion == calculateIndex(ix)), 'picked': (pickLookup[calculateIndex(ix)] && pickLookup[calculateIndex(ix)].picked) }]">
@@ -68,11 +70,13 @@ export default {
         index: String,
         searchResults: Object,
         pickLookup: Object,
+        // BLUECORE update start
         searchMode: String,
         gettySearchType: {
             type: String,
             default: 'aat',
         }
+        // BLUECORE update end
 
     },
 
@@ -109,9 +113,11 @@ export default {
             this.$emit('nafSearch', searchMap[searchType])
         },
 
+        // BLUECORE update start
         setGettySearch: function(searchType){
             this.$emit('lookupSearch', searchType)
         },
+        // BLUECORE update end
 
         checkFromRda: function (data) {
             let notes = data.extra.notes || []

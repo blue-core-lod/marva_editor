@@ -81,6 +81,7 @@
 
             <div :style="`${this.preferenceStore.styleModalBackgroundColor()};`"
               :class="['subject-editor-container-left', { 'subject-editor-container-left-lowres': lowResMode }]">
+              <!-- BLUECORE update start - implement BCL-UP buttons and make the buttons respoinsive -->
               <div
                 :style="`flex:1; align-self: flex-end; height: 95%; ${this.preferenceStore.styleModalBackgroundColor()}`"
                 :class="['subject-search-column', { 'scroll-all': preferenceStore.returnValue('--b-edit-complex-scroll-all') && !preferenceStore.returnValue('--b-edit-complex-scroll-independently') }]">
@@ -121,6 +122,7 @@
 
                 </div>
               </div>
+              <!-- BLUECORE update end -->
 
               <!-- Results Panel -->
               <DetailsPanel :contextData="contextData" :contextRequestInProgress="contextRequestInProgress"
@@ -351,6 +353,7 @@ body #app {
   overflow-y: hidden;
 }
 
+/* BLUECORE update start - implement BCL-UP buttons and make the buttons respoinsive */
 .subject-search-column {
   flex: 1;
   align-self: flex-end;
@@ -364,6 +367,7 @@ body #app {
   flex: 1;
   min-height: 0;
 }
+/* BLUECORE update end */
 
 .subject-editor-container-left-lowres {
   font-size: 0.75em !important;
@@ -569,6 +573,7 @@ body #app {
   border: solid 1px #c1c1c1;
 }
 
+/* BLUECORE update start - implement BCL-UP buttons and make the buttons respoinsive */
 #search-in-holder {
   display: flex;
   flex-direction: column;
@@ -583,6 +588,7 @@ body #app {
   gap: 0.35em;
   width: 100%;
 }
+/* BLUECORE update end */
 
 #search-in-holder .active {
   background-color: whitesmoke;
@@ -779,7 +785,11 @@ import short from 'short-uuid'
 import AuthTypeIcon from "@/components/panels/edit/fields/helpers/AuthTypeIcon.vue";
 
 import utilsNetwork from '@/lib/utils_network';
+// BLUECORE update start
+// use the new subjectSearchWithBclup function for searching subjects with BCL-UP integration
+// subjectSearchWithBclup calls subjectSearch for non-bcl-up searches.
 import { subjectSearchWithBclup } from '@/bluecore/utils'
+// BLUECORE update end
 
 import { AccordionList, AccordionItem } from "vue3-rich-accordion";
 import DetailsPanel from './helpers/DetailsPanel.vue'
@@ -845,7 +855,9 @@ export default {
       activeSearch: false,
 
       nafSearchType: 'NAF Auth Names',
+      // BLUECORE update start - make aat default search type for Getty search
       gettySearchType: 'aat',
+      // BLUECORE update end
 
       pickPostion: 0,
       pickLookup: {},
@@ -1603,9 +1615,11 @@ export default {
 
       }
 
+      // BLUECORE update start
       for (let x in this.searchResults.bclup) {
         this.pickLookup[x] = this.searchResults.bclup[x]
       }
+      // BLUECORE update end
     },
 
     // some context messing here, pass the debounce func a ref to the vue "this" as that to ref in the function callback
@@ -1660,6 +1674,7 @@ export default {
       }
 
       if (searchString.length > 2){
+        // BLUECORE update start - use subjectSearchWithBclup
         that.searchResults = await subjectSearchWithBclup(
           utilsNetwork,
           searchString,
@@ -1668,6 +1683,7 @@ export default {
           that.searchMode,
           that.gettySearchType
         )
+        // BLUECORE update end
       } else {
         return
       }
@@ -1708,9 +1724,11 @@ export default {
 		s.entity = true
 	  }
 
+      // BLUECORE update start
       for (let s of that.searchResults.bclup) {
         s.bclup = true
       }
+      // BLUECORE update end
 
       for (let s of that.searchResults.subjectsSimple) {
         if (s.suggestLabel && s.suggestLabel.includes('(DEPRECATED')) {
@@ -2118,6 +2136,7 @@ export default {
       this.buildPickLookup()
     },
 
+    // BLUECORE update start
     lookupSearch: async function(type){
       if (this.searchMode !== 'BCLUP_GETTY') {
         return
@@ -2129,6 +2148,7 @@ export default {
         this.searchApis(this.activeComponent.label, this.subjectString, this)
       }
     },
+    // BLUECORE update end
 
     selectContext: async function (pickPostion, update = true) {
       if (pickPostion != null) {
@@ -2422,10 +2442,12 @@ export default {
         this.searchModeSwitch("HUBS")
       } else if (event.ctrlKey && event.altKey && event.key == "5") {
         this.searchModeSwitch("ENTITIES")
+      // BLUECORE update start
       } else if (event.ctrlKey && event.altKey && event.key == "7") {
         this.searchModeSwitch("BCLUP_GETTY")
       } else if (event.ctrlKey && event.altKey && event.key == "8") {
         this.searchModeSwitch("BCLUP_HOMOSAURUS")
+      // BLUECORE update end
       } else if ((this.searchMode == 'GEO' || this.searchMode == 'ENTITIES') && event.key == "-") {
         if (this.components.length > 0) {
           let lastC = this.components[this.components.length - 1]
@@ -3076,8 +3098,10 @@ export default {
 
     cleanState: function () {
       this.searchMode = "LCSHNAF"
+      // BLUECORE udpate start
       this.nafSearchType = 'NAF Auth Names'
       this.gettySearchType = 'aat'
+      // BLUECORE udpate end
       this.components = []
       this.lookup = {}
       this.searchResults = null
