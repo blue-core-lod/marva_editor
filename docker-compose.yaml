@@ -2,9 +2,6 @@ services:
   marva-quartz:
     build:
       context: .
-      args:
-        VITE_KEYCLOAK_AUTH_PATH: "http://localhost/keycloak/"
-        VITE_BLUECORE_API_PATH: "http://localhost/api/"
     ports:
       - "8080:8080"
     environment:

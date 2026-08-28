@@ -3,7 +3,10 @@
 // ##                                                                         ##
 // ## Blue Core specific environment paths and values will be utilized here.  ##
 // #############################################################################
-const apiBase = (import.meta.env.VITE_BLUECORE_API_PATH || 'http://localhost:3000') // Bluecore API Base Endpoint
+// Relative by default so it resolves against whatever host is serving the app,
+// the same trick utilBase uses below. One image then works on every bluecore
+// domain. Override with VITE_BLUECORE_API_PATH only if the API moves off-origin.
+const apiBase = (import.meta.env.VITE_BLUECORE_API_PATH || '/api/') // Bluecore API Base Endpoint
 const utilBase = (import.meta.env.VITE_KEYCLOAK_MIDDLEWARE_BASE || '/marva/util/') //default: 'http://localhost:9401/marva/util/'
 
 
