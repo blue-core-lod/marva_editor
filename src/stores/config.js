@@ -905,7 +905,7 @@ export const useConfigStore = defineStore('config', {
         // TODO: we will want to update this later to use production config
         // (not externalDev) for bluecore at a later date when we are ready.
         // -----------------------------------------------------------------
-        } else if (window && (window.location.href.includes('https://dev.bcld.info/marva/'))) {
+        } else if (window && (window.location.href.includes('https://dev.bcld.info/marva/')) || (window.location.href.includes('https://bluecore-dev.stanford.edu/marva/')) || (window.location.href.includes('https://bluecore.stanford.edu/marva/'))) {
           console.log(">>>>>>>window.location.href.includes('https://dev.bcld.info/marva/')<<<<<<<<<")
           return state.regionUrls.bluecore.prod
           // ##################  Bluecore URLS End  ##############################
