@@ -12,6 +12,15 @@ const bluecoreApiBase = (import.meta.env.VITE_BLUECORE_API_PATH || '/api/').repl
 // UUID matcher used for UUID input
 const uuidOnlyPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+export function isBluecoreMarva(href) {
+  const bluecoreMarvaUrls = ['https://bcld.info/marva/', 'https://dev.bcld.info/marva/', 'https://stage.bcld.info/marva/', 'https://bluecore.stanford.edu/marva/', 'https://bluecore-dev.stanford.edu/marva/', 'https://bluecore-stage.stanford.edu/marva/'];
+  for (const url of bluecoreMarvaUrls) {
+    if (href.includes(url)) {
+      return true
+    }
+  }
+  return false
+}
 
 // Splits an input URL string into [path, querySuffix]
 function splitPathAndQuery(input) {

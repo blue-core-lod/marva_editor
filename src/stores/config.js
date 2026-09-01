@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import utilsNetwork from '@/lib/utils_network';
 import scriptShifterLangCodes from '@/lib/scriptShifterLangCodes.json';
 import bluecore from '@/bluecore/environment';
+import { isBluecoreMarva } from '@/bluecore/utils';
 
 export const useConfigStore = defineStore('config', {
   state: () => ({
@@ -905,8 +906,8 @@ export const useConfigStore = defineStore('config', {
         // TODO: we will want to update this later to use production config
         // (not externalDev) for bluecore at a later date when we are ready.
         // -----------------------------------------------------------------
-        } else if (window && (window.location.href.includes('https://dev.bcld.info/marva/')) || (window.location.href.includes('https://bluecore-dev.stanford.edu/marva/')) || (window.location.href.includes('https://bluecore.stanford.edu/marva/'))) {
-          console.log(">>>>>>>window.location.href.includes('https://dev.bcld.info/marva/')<<<<<<<<<")
+        } else if (window && isBluecoreMarva(window.location.href)) {
+          console.log(">>>>>>>window.location.href is Blue Core Marva<<<<<<<<<")
           return state.regionUrls.bluecore.prod
           // ##################  Bluecore URLS End  ##############################
 
