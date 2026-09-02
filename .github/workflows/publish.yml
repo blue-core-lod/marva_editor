@@ -25,10 +25,7 @@ jobs:
         env:
           MARVA_IMAGE: ghcr.io/blue-core-lod/marva
         run: |
-          docker build \
-            --build-arg VITE_KEYCLOAK_AUTH_PATH="${{ secrets.MARVA_KEYCLOAK_PATH }}" \
-            --build-arg VITE_BLUECORE_API_PATH="${{ secrets.MARVA_BLUECORE_API_PATH }}" \
-            -t $MARVA_IMAGE:latest .
+          docker build -t $MARVA_IMAGE:latest .
           docker push $MARVA_IMAGE:latest
 
       - name: Build and push marva keycloak middleware :latest
