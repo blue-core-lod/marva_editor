@@ -21,12 +21,27 @@ jobs:
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      # Baked into the image and reported by /marva/health. Releases report
+      # their tag (e.g. v3.11); branch builds report the branch and commit.
+      - name: Resolve version
+        id: version
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          [ -n "$VERSION" ] || VERSION="$GITHUB_REF_NAME-$(git rev-parse --short HEAD)"
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Build and push marva editor :latest
         env:
           MARVA_IMAGE: ghcr.io/blue-core-lod/marva
+          VERSION: ${{ steps.version.outputs.value }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          docker build -t $MARVA_IMAGE:latest .
+          docker build --build-arg MARVA_VERSION="$VERSION" -t $MARVA_IMAGE:latest .
           docker push $MARVA_IMAGE:latest
+          if [ -n "$RELEASE_TAG" ]; then
+            docker tag $MARVA_IMAGE:latest "$MARVA_IMAGE:$RELEASE_TAG"
+            docker push "$MARVA_IMAGE:$RELEASE_TAG"
+          fi
 
       - name: Build and push marva keycloak middleware :latest
         env:
