@@ -20,6 +20,20 @@
 
     <InstanceSelectionModal ref="instanceSelectionModal" :currentRt="currentRt" :instances="instances" v-model="displayInstanceSelectionModal" @hideInstanceSelectionModal="hideInstanceSelectionModal()" @emitSetInstance="setInstance"/>
 
+    <ShortcodeAliasModal v-if="displayShortcodeAliasModal" :structure="structure" v-model="displayShortcodeAliasModal" @hideShortcodeAliasModal="displayShortcodeAliasModal=false"/>
+
+    <Teleport to="body">
+      <div v-if="showRelWorkIframeModal" class="rel-work-iframe-overlay">
+        <div class="rel-work-iframe-container">
+          <div class="rel-work-iframe-header">
+            <span>{{ relWorkEditMode ? 'Edit Related Music Work' : 'Create Related Music Work' }}</span>
+            <button class="rel-work-iframe-close" @click="closeRelWorkIframeModal()">✕</button>
+          </div>
+          <iframe :src="relWorkIframeSrc" class="rel-work-iframe"></iframe>
+        </div>
+      </div>
+    </Teleport>
+
     <template #popper>
 
       <div class="action-button-menu-background" :style="'background-color: ' + preferenceStore.returnValue('--c-edit-general-action-button-menu-background-color')  + ';'">
@@ -50,11 +64,11 @@
         </template>
 
         <template v-if="['lc:RT:bf2:WorkTitle', 'lc:RT:bf2:InstanceTitle', 'lc:RT:bf2:Title:VarTitle', 'lc:RT:bf2:ParallelTitle'].includes(structure.parentId)">
-          <button  class="" :id="`action-button-command-${fieldGuid}-4`" @click="sendToOtherProfile()" :style="buttonStyle">
+          <button  class="" :id="`action-button-command-${fieldGuid}-4`" @click="sendToOtherProfile(this.guid)" :style="buttonStyle">
             <span class="button-shortcut-label">4</span>
             Send to {{ this.profileStore.returnRtByGUID(this.guid).includes(":Work") ? "Instance" : (Object.keys(this.profileStore.activeProfile.rt).length > 2 ? "Work/Instance" : "Work") }}
           </button>
-          <button  class="" @click="sendToOtherProfile(null, true)" :style="buttonStyle" v-if="this.profileStore.returnRtByGUID(this.guid).includes(':Instance')">
+          <button  class="" @click="sendToOtherProfile(this.guid, null, true)" :style="buttonStyle" v-if="this.profileStore.returnRtByGUID(this.guid).includes(':Instance')">
             Send Subtitle to Work Variant
           </button>
         </template>
@@ -88,6 +102,11 @@
 
         <template v-if="type=='lookupSimple'">
 
+          <button class="" :id="`action-button-command-${fieldGuid}-5`" @click="openShortcodeAliasModal()" :style="buttonStyle">
+            <span class="button-shortcut-label">5</span>
+            Set Shortcode Alias
+          </button>
+          <hr>
 
         </template>
         <template v-if="type=='lookupComplex' || structure.parent.includes(':Identifiers')">
@@ -123,8 +142,14 @@
 
 
         <template v-if="showBuildHubStub()">
-              <button  class="" :id="`action-button-command-${fieldGuid}-d`" @click="buildHubStub()" :style="buttonStyle">
-                Create Hub
+              <button  class="" :id="`action-button-command-${fieldGuid}-d`" @click="isRelWorkExpressionLookupField() ? openRelWorkExpressionEditor() : buildHubStub()" :style="buttonStyle">
+                {{ isRelWorkExpressionLookupField() ? 'Create Related Music Work' : 'Create Hub' }}
+              </button>
+              <button v-if="isRelWorkExpressionLookupField() && returnExistingRelWorkExpressionUri()" class="" :id="`action-button-command-${fieldGuid}-b`" @click="openRelWorkExpressionEditor(returnExistingRelWorkExpressionUri())" :style="buttonStyle">
+                Create New Related Music Work Based on Existing
+              </button>
+              <button v-if="isRelWorkExpressionLookupField() && returnExistingRelWorkExpressionUri()" class="" :id="`action-button-command-${fieldGuid}-e`" @click="openRelWorkExpressionEditor(returnExistingRelWorkExpressionUri(), true)" :style="buttonStyle">
+                Edit Related Music Work
               </button>
         </template>
 
@@ -211,6 +236,7 @@
 
   import AutoDewey from "@/components/panels/edit/modals/AutoDeweyModal.vue";
   import InstanceSelectionModal from "@/components/panels/edit/modals/InstanceSelectionModal.vue";
+  import ShortcodeAliasModal from "@/components/panels/edit/modals/ShortcodeAliasModal.vue";
   import { usePreferenceStore } from '@/stores/preference'
   import { useProfileStore } from '@/stores/profile'
   import { useConfigStore } from '@/stores/config'
@@ -225,6 +251,7 @@
     components: {
     AutoDewey,
     InstanceSelectionModal,
+    ShortcodeAliasModal,
   },
     props: {
       type: String,
@@ -256,13 +283,19 @@
         targetInstance: null,
         currentRt: null,
 
+        displayShortcodeAliasModal: false,
+
+        showRelWorkIframeModal: false,
+        relWorkIframeSrc: null,
+        relWorkEditMode: false,
+
       }
     },
     computed: {
       ...mapStores(usePreferenceStore),
       ...mapStores(useProfileStore),
       ...mapState(usePreferenceStore, ['scriptShifterOptions','catInitals']),
-      ...mapState(useProfileStore, ['activeProfile']),
+      ...mapState(useProfileStore, ['activeProfile', 'sendToOtherProfile']),
 
 
       ...mapWritableState(usePreferenceStore, ['debugModalData','showDebugModal']),
@@ -331,6 +364,11 @@
         this.instances = {}
         this.displayInstanceSelectionModal = false;
       },
+
+      openShortcodeAliasModal: function(){
+        this.isMenuShown = false
+        this.displayShortcodeAliasModal = true
+      },
       hideDeweyModal:function (){
         this.displayDewey = false
       },
@@ -343,6 +381,12 @@
       showBuildHubStub(){
         if (!this.propertyPath) return false;
         if (this.propertyPath && this.propertyPath.length==0) return false;
+
+        // in the related work expression lookup component the create actions only belong on
+        // the associated resource field, not the relationship (or any other) field next to it
+        if (this.isRelWorkExpressionLookupField() && !this.isAssociatedResourceField()){
+          return false
+        }
 
         let pt = this.profileStore.returnStructureByComponentGuid(this.guid)
         if (pt && pt.propertyURI && pt.propertyURI == "http://id.loc.gov/ontologies/bibframe/relation"){
@@ -363,6 +407,163 @@
 
 
 
+
+      openRelWorkExpressionEditor(loadUri, editMode){
+        // open the minimal edit screen in an iframe, it runs the whole app stack on its own
+        // so there is no conflict with this session's stores. It gets told which profile to
+        // use via the query params (a load url and uri can also be passed when needed)
+        let profileId = this.profileStore.resolveTemplateId('lc:RT:RelatedWorkExpression')
+        let query = { profile: profileId }
+
+        this.relWorkEditMode = editMode === true
+
+        if (this.relWorkEditMode){
+          // editing the existing resource in place, it keeps its own URI and the
+          // minimal editor posts it as an update instead of a create
+          query.uri = loadUri
+          query.load = loadUri
+          query.edit = 'true'
+        } else {
+          let uri = this.mintRelWorkExpressionUri()
+          if (uri){
+            query.uri = uri
+          }
+
+          // basing the new expression off an existing one, the minimal editor will pull in
+          // that record's data as the starting point (but still use the newly minted uri)
+          if (loadUri){
+            query.load = loadUri
+          }
+        }
+
+        let route = this.$router.resolve({ name: 'EditMinimal', query: query })
+        this.relWorkIframeSrc = route.href
+        this.showRelWorkIframeModal = true
+        this.isMenuShown = false
+        // listen for the iframe telling us it posted the new resource
+        window.addEventListener('message', this.handleEditMinimalMessage)
+      },
+
+      closeRelWorkIframeModal(){
+        window.removeEventListener('message', this.handleEditMinimalMessage)
+        this.showRelWorkIframeModal = false
+        this.relWorkIframeSrc = null
+      },
+
+      /**
+       * The minimal editor iframe posted its record successfully, insert the resource it
+       * created into this field's userValue and close the iframe
+       */
+      async handleEditMinimalMessage(event){
+        if (event.origin !== window.location.origin){ return }
+        if (!event.data || event.data.type !== 'editMinimalPosted'){ return }
+        if (!this.showRelWorkIframeModal){ return }
+
+        this.closeRelWorkIframeModal()
+
+        // if the field already holds an expression (the new one was based off of it for
+        // example) don't overwrite it, add another component and put the new one there.
+        // Not when the existing resource itself was edited though, then the field keeps
+        // its component and just gets the (possibly changed) label refreshed
+        let useGuid = this.guid
+        if (!this.relWorkEditMode && this.returnExistingRelWorkExpressionUri()){
+          let newGuid = await this.profileStore.duplicateComponent(this.profileStore.returnStructureByComponentGuid(this.guid)['@guid'], this.structure)
+          if (newGuid){
+            useGuid = newGuid
+          }
+        }
+
+        // same insert used when a lookup value is picked for the field
+        let nodeMap = {
+          collections: [],
+          genres: [],
+          rdftypes: ['Work'],
+          subjects: [],
+        }
+        this.profileStore.setValueComplex(useGuid, null, this.propertyPath, event.data.uri, event.data.label, 'Work', nodeMap, null)
+      },
+
+      /**
+       * Related work expressions get the URI of the work they hang off of plus a counter,
+       * e.g. .../works/in01260000069 -> .../works/in01260000069-001. Any expressions already
+       * on the record with that same base URI are counted so the next free number is used.
+       * @return {string|null} the URI to use for the new related work expression
+       */
+      mintRelWorkExpressionUri(){
+        let thisRt = this.profileStore.returnRtByGUID(this.guid)
+        let workUri = null
+        if (thisRt && this.profileStore.activeProfile.rt[thisRt] && this.profileStore.activeProfile.rt[thisRt].URI){
+          workUri = this.profileStore.activeProfile.rt[thisRt].URI
+        }
+        if (!workUri){
+          console.warn('Could not find the URI of the work this field belongs to, the related work expression editor will mint its own URI')
+          return null
+        }
+
+        // new records carry an eId based URI in memory (.../works/e1234567890) that only
+        // becomes the real .../works/in### identifier at export time, when buildXML swaps
+        // the eId for the marvaLocalId. Do the same swap here so the minted URI matches
+        // what actually gets posted for the parent work.
+        if (this.profileStore.activeProfile.marvaLocalId && this.profileStore.activeProfile.eId){
+          workUri = workUri.replace(this.profileStore.activeProfile.eId, this.profileStore.activeProfile.marvaLocalId)
+        }
+
+        // find the highest counter in use anywhere in the record for this base URI
+        let maxCounter = 0
+        let escaped = workUri.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        let counterRegEx = new RegExp('"' + escaped + '-(\\d+)"', 'g')
+        let recordJson = JSON.stringify(this.profileStore.activeProfile.rt)
+        for (let match of recordJson.matchAll(counterRegEx)){
+          let counter = parseInt(match[1], 10)
+          if (counter > maxCounter){
+            maxCounter = counter
+          }
+        }
+
+        return workUri + '-' + String(maxCounter + 1).padStart(3, '0')
+      },
+
+      /**
+       * If this field already holds a related work expression return its URI, it can be
+       * used as the starting data for building a new one off of it
+       * @return {string|null} the URI of the expression in the field's value
+       */
+      returnExistingRelWorkExpressionUri(){
+        let pt = this.profileStore.returnStructureByComponentGuid(this.guid)
+        if (!pt || !pt.userValue){ return null }
+        let match = JSON.stringify(pt.userValue).match(/"@id":\s*"(https?:\/\/[^"]*\/resources\/works\/[^"]+?)"/)
+        return match ? match[1] : null
+      },
+
+      isAssociatedResourceField(){
+        // is this specific field the bf:associatedResource lookup, checked against the
+        // field's own structure (each field in a component shares the component guid but
+        // gets its own structure/propertyPath)
+        if (this.structure && this.structure.propertyURI == 'http://id.loc.gov/ontologies/bibframe/associatedResource'){
+          return true
+        }
+        if (this.propertyPath && this.propertyPath.length > 0){
+          let last = this.propertyPath[this.propertyPath.length - 1]
+          if (last && last.propertyURI == 'http://id.loc.gov/ontologies/bibframe/associatedResource'){
+            return true
+          }
+        }
+        return false
+      },
+
+      isRelWorkExpressionLookupField(){
+        // fields whose value templates point at a RelWorkExpressionLookup template get a
+        // differently worded create action than the generic "Create Hub"
+        let refs = []
+        let pt = this.profileStore.returnStructureByComponentGuid(this.guid)
+        if (pt && pt.valueConstraint && pt.valueConstraint.valueTemplateRefs){
+          refs = refs.concat(pt.valueConstraint.valueTemplateRefs)
+        }
+        if (this.structure && this.structure.valueConstraint && this.structure.valueConstraint.valueTemplateRefs){
+          refs = refs.concat(this.structure.valueConstraint.valueTemplateRefs)
+        }
+        return refs.some((r) => typeof r === 'string' && r.includes('RelWorkExpressionLookup'))
+      },
 
       buildHubStub(){
         // console.log(this.guid)
@@ -913,269 +1114,9 @@
       setInstance: function(data){
         this.targetInstance = data
         this.displayInstanceSelectionModal = false
-        this.sendToOtherProfile(data)
+        this.sendToOtherProfile(this,guid, data)
       },
 
-      /**
-       * Send the information in a component between Work and Instances
-       * Can be used in either direction.
-       * @param target = When there's more than 1 instance, says which instance  to insert into
-       * @param variant = Create a varianet title
-       */
-      sendToOtherProfile: async function(target=null, variant=false){
-        const Rts = Object.keys(this.profileStore.activeProfile.rt)
-        let thisRt = this.profileStore.returnRtByGUID(this.guid)
-        this.currentRt = thisRt
-
-        //get the structure that will be copied over
-        let structure = this.profileStore.returnStructureByComponentGuid(this.guid)
-
-        //Structure that will get the changes and be passed on
-        const activeStructure = JSON.parse(JSON.stringify(structure))
-
-
-        let subTitleCheck = false
-        let subTitle = false
-        let subTitleLang = false
-        let subTitleGuid = false
-        if (thisRt.includes("lc:RT:bf2:Monograph:Instance")){ //if source == instance && there's a subtitle
-          let userValue = activeStructure.userValue
-          let title = userValue["http://id.loc.gov/ontologies/bibframe/title"][0]
-          if (Object.keys(title).includes("http://id.loc.gov/ontologies/bibframe/subtitle")){
-            subTitleCheck = true
-            console.log("This is the subtitle:",title["http://id.loc.gov/ontologies/bibframe/subtitle"])
-            subTitle = []
-            subTitleLang = []
-            // grab any highlighted text before it gets cleared by the click
-            let highlightedText = window.getSelection ? window.getSelection().toString().trim() : ''
-            window.getSelection().removeAllRanges()
-
-            for (let sub of title["http://id.loc.gov/ontologies/bibframe/subtitle"]){
-              subTitle.push(sub["http://id.loc.gov/ontologies/bibframe/subtitle"])
-              subTitleLang.push(sub["@language"])
-            }
-            // if user had highlighted text and it exists in one of the subtitles, use that instead
-            if (highlightedText.length > 0){
-              for (let sub of title["http://id.loc.gov/ontologies/bibframe/subtitle"]){
-                if (sub["http://id.loc.gov/ontologies/bibframe/subtitle"].includes(highlightedText)){
-                  subTitle = [highlightedText]
-                  if (this.isAllNonLatin(highlightedText) == false){
-                    subTitleLang = false
-                  }
-                  break
-                }
-              }
-            }
-            subTitleGuid = title["http://id.loc.gov/ontologies/bibframe/subtitle"][0]["@guid"]
-          }
-        }
-
-        if (variant && !subTitle){
-          alert("There is no subtitle to send.")
-          return
-        }
-
-        if (!variant){
-          subTitleCheck = false
-        }
-
-        //This works when there is only 1 of each
-        let oldRt = thisRt
-        let newRt
-        let sTitle = false // subtitle taken from work main title after ` : `
-
-        if (Rts.length == 2){
-          newRt = Rts.filter((rt) => rt != thisRt)
-        }
-
-        // this doesn't need to be treated differently for multiple instances
-        if (thisRt.includes(":Work")){
-          activeStructure.preferenceId = activeStructure.preferenceId.replace(":Work", ":Instance")
-        } else {
-          activeStructure.preferenceId = activeStructure.preferenceId.replace(":Instance", ":Work")
-        }
-
-        if (Rts.length > 2 && target != null && target != "all"){
-          newRt = target
-        }
-        if (Rts.length > 2 && target == "all"){
-          newRt = Rts.filter((rt) => rt != thisRt)
-        }
-
-        // if there are multiple instance, but no target, get the target and restart
-        if (Rts.length > 2 && target == null){
-          for (let rt of Rts.filter((r) => r != thisRt)){
-            this.instances[rt] = this.activeProfile.rt[rt]
-          }
-          this.displayInstanceSelectionModal = true
-          return
-        }
-
-        if (!Array.isArray(newRt)){ // when does this happen?
-
-          activeStructure.parent = activeStructure.parent.replace(oldRt, newRt)
-          activeStructure.parentId = activeStructure.parentId.replace(oldRt, newRt)
-
-          this.profileStore.changeGuid(activeStructure)
-
-          //Moving Instance -> Work, cut out bf:subtitle, but add it to the title
-          let userValue = activeStructure.userValue
-          if (thisRt.includes("lc:RT:bf2:Monograph:Instance")){
-            let title = userValue["http://id.loc.gov/ontologies/bibframe/title"][0]
-            if (Object.keys(title).includes("http://id.loc.gov/ontologies/bibframe/subtitle")){
-              // add subTitle to mainTitle
-              let mTitle = title["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"]
-              title["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"] = mTitle + " : " + subTitle
-
-              delete title["http://id.loc.gov/ontologies/bibframe/subtitle"]
-            }
-          }
-
-          // make adjustment for subtitles in instance
-          if (newRt.includes(":Work")){
-            let additionalTitleStructure = false
-            if (subTitleCheck){
-              additionalTitleStructure = JSON.parse(JSON.stringify(activeStructure))
-              // get a new GUID
-              this.profileStore.changeGuid(additionalTitleStructure)
-              // update the type
-              additionalTitleStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["@type"] = "http://id.loc.gov/ontologies/bibframe/VariantTitle"
-              //update the value
-              additionalTitleStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"] = subTitle
-              //Add it
-              this.profileStore.parseActiveInsert(additionalTitleStructure, thisRt)
-            }
-          }
-
-          //do the main change
-          if (!subTitleCheck){
-            let userValue = activeStructure.userValue
-            if (sTitle){
-              // Add the Work subtitle to the instance's "Other title information"
-              activeStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/subtitle"] = [
-                {
-                  "@guid": short.generate(),
-                  "http://id.loc.gov/ontologies/bibframe/subtitle": sTitle
-                }
-              ]
-              // Remove subtitle from mainTitle for instance titles
-              let mTitle = activeStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"]
-              activeStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"] = mTitle.replace(" : " + sTitle, "")
-            }
-            this.profileStore.parseActiveInsert(activeStructure, thisRt)
-          }
-        } else {
-          for (let rt of newRt){
-            activeStructure.parent = activeStructure.parent.replace(oldRt, rt)
-            activeStructure.parentId = activeStructure.parentId.replace(oldRt, rt) // when there's more than 1 instance this is the most important change.
-
-            this.profileStore.changeGuid(activeStructure)
-
-            //Moving Instance -> Work, cut out bf:subtitle
-            let userValue = activeStructure.userValue
-            if (thisRt.includes("lc:RT:bf2:Monograph:Instance")){
-              let title = userValue["http://id.loc.gov/ontologies/bibframe/title"][0]
-              if (Object.keys(title).includes("http://id.loc.gov/ontologies/bibframe/subtitle")){
-                // add subTitle to mainTitle
-                let mTitle = title["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"]
-                title["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"] = mTitle + " : " + subTitle
-
-                delete title["http://id.loc.gov/ontologies/bibframe/subtitle"]
-              }
-            } else { // check if the work title has a subtitle
-              let mTitle = userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"]
-              if (mTitle.includes(" : ")){
-                let titleParts = mTitle.split(" : ")
-                mTitle = titleParts[0]
-                sTitle = titleParts[1]
-              }
-            }
-
-            // make adjustment for subtitles in instance
-            if (rt.includes(":Work")){
-              let additionalTitleStructure = false
-              if (subTitleCheck){
-                additionalTitleStructure = JSON.parse(JSON.stringify(activeStructure))
-                // get a new GUID
-                this.profileStore.changeGuid(additionalTitleStructure)
-                // update the type
-                additionalTitleStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["@type"] = "http://id.loc.gov/ontologies/bibframe/VariantTitle"
-                //update the value
-
-                let mainTitleArray = additionalTitleStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"]
-                let template = JSON.parse(JSON.stringify(mainTitleArray[0]))
-                if (Array.isArray(subTitle)){
-                  for (let i = 0; i < subTitle.length; i++){
-                    if (mainTitleArray[i]){
-                      mainTitleArray[i]["http://id.loc.gov/ontologies/bibframe/mainTitle"] = subTitle[i]
-                    } else {
-                      let newEntry = JSON.parse(JSON.stringify(template))
-                      newEntry["http://id.loc.gov/ontologies/bibframe/mainTitle"] = subTitle[i]
-                      mainTitleArray.push(newEntry)
-                    }
-                    // add in the language if there is one
-                    if (subTitleLang[i]){
-                      mainTitleArray[i]["@language"] = subTitleLang[i]
-                    }
-                  }
-
-                } else {
-                  mainTitleArray[0]["http://id.loc.gov/ontologies/bibframe/mainTitle"] = subTitle
-                }
-
-                // if there are more mainTitles than subtitles, trim to match
-                let expectedLength = Array.isArray(subTitle) ? subTitle.length : 1
-                if (mainTitleArray.length > expectedLength){
-                  additionalTitleStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"] = mainTitleArray.slice(0, expectedLength)
-                }
-                // and delete the @language if there
-                // if subTitleLang === false then it is a substring selection so remove the lang
-                if (subTitleLang === false && additionalTitleStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["@language"]){
-                  delete additionalTitleStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["@language"]
-                }
-                // and delete anything that is not a http://id.loc.gov/ontologies/bibframe/mainTitle
-                for (let key in additionalTitleStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]){
-                  if (key != "http://id.loc.gov/ontologies/bibframe/mainTitle" && key != "@type" && key != "@guid"){
-                    delete additionalTitleStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0][key]
-                  }
-                }
-                //Add it
-                this.profileStore.parseActiveInsert(additionalTitleStructure, thisRt)
-              }
-            }
-
-            //do the main change
-            if (!subTitleCheck){
-              let userValue = activeStructure.userValue
-              if (sTitle){
-                // Add the Work subtitle to the instance's "Other title information"
-                activeStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/subtitle"] = [
-                  {
-                    "@guid": short.generate(),
-                    "http://id.loc.gov/ontologies/bibframe/subtitle": sTitle
-                  }
-                ]
-                // Remove subtitle from mainTitle for instance titles
-                let mTitle = activeStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"]
-                activeStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"][0]["http://id.loc.gov/ontologies/bibframe/mainTitle"] = mTitle.replace(" : " + sTitle, "")
-              }
-
-              this.profileStore.parseActiveInsert(activeStructure, thisRt)
-            }
-          }
-        }
-
-        //if it's a variant or parallel title, delete the original
-        const type = activeStructure.userValue["http://id.loc.gov/ontologies/bibframe/title"][0]["@type"]
-        if (["http://id.loc.gov/ontologies/bibframe/ParallelTitle", "http://id.loc.gov/ontologies/bibframe/VariantTitle"].includes(type)){
-          this.profileStore.deleteComponent(this.profileStore.returnStructureByComponentGuid(this.guid)['@guid'])
-        }
-        //Force XML update
-        this.profileStore.dataChanged()
-      },
-
-
-      // show the button for de/promotion
       isContribComponent: function(){
         let parentStructure = this.profileStore.returnStructureByComponentGuid(this.guid)
 
@@ -1288,6 +1229,9 @@
 
 
     },
+    beforeUnmount: function(){
+      window.removeEventListener('message', this.handleEditMinimalMessage)
+    },
     watch: {
 
     }
@@ -1296,6 +1240,51 @@
 
 
 <style scoped>
+
+  .rel-work-iframe-overlay{
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .rel-work-iframe-container{
+    width: 85%;
+    height: 90%;
+    background-color: white;
+    border: solid 1px black;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .rel-work-iframe-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 10px;
+    border-bottom: solid 1px black;
+    font-weight: bold;
+    flex: 0 0 auto;
+  }
+
+  .rel-work-iframe-close{
+    cursor: pointer;
+    background-color: white;
+    border: solid 1px black;
+    border-radius: 4px;
+  }
+
+  .rel-work-iframe{
+    flex: 1 1 auto;
+    width: 100%;
+    border: none;
+  }
+
   .action-button-menu-background{
     width: 250px;
 
