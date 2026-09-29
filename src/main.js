@@ -7,6 +7,7 @@ import router from "./router";
 import i18nMessages from "./lib/i18n.js"
 import { createVfm } from 'vue-final-modal'
 import FloatingVue from 'floating-vue'
+import { redirectToSsoIfLoggedOut } from '@/bluecore/sso' // BLUECORE
 
 import "./assets/main.css";
 import 'vue-final-modal/style.css'
@@ -50,7 +51,7 @@ app.use(router);
 app.use(i18n)
 app.use(FloatingVue)
 
-app.mount("#app");
+if (!redirectToSsoIfLoggedOut()) app.mount("#app"); // BLUECORE: skip rendering when redirecting to SSO
 
 
 

@@ -22,6 +22,21 @@ export function isBluecoreMarva(href) {
   return false
 }
 
+// Tracks when the page is navigating away (e.g. SSO login redirect). The browser
+// cancels in-flight fetches at that point, which should not be shown to the user
+// as real load failures.
+let pageUnloading = false
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => { pageUnloading = true })
+  window.addEventListener('pagehide', () => { pageUnloading = true })
+  window.addEventListener('pageshow', () => { pageUnloading = false })
+}
+
+// Return true when a failed fetch should be alerted to the user
+export function shouldAlertFetchError(err) {
+  return !pageUnloading && !(err && err.name === 'AbortError')
+}
+
 // Splits an input URL string into [path, querySuffix]
 function splitPathAndQuery(input) {
   const value = input.trim()

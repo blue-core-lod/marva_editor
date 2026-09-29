@@ -130,6 +130,7 @@ export default {
     } else if (!hasSsoUser){
       // No valid JWT — redirect to SSO login
       this.preferenceStore.ssoLogin(this.configStore.returnUrls.util)
+      return // BLUECORE: page is redirecting to SSO, don't start loading profiles
     } else {
       // Start background JWT refresh timer
       this.preferenceStore.startJwtRefreshTimer(this.configStore.returnUrls.util)
