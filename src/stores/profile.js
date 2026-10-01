@@ -15,7 +15,7 @@ import { parseDimensions } from '@/lib/parseDimensions';
 // BLUECORE update start
 import { NS_BF_SOURCE } from '@/bluecore/constants';
 import { isLocalScratchpad, loadRecordLocal, forkPublishedRecordOnSave } from '@/bluecore/scratchpad'; //Bluecore Plugin
-import { handleBclupSource, isBclupSource } from '@/bluecore/utils';
+import { handleBclupSource, isBclupSource, shouldAlertFetchError } from '@/bluecore/utils';
 // BLUECORE update end
 
 // import utilsMisc from '@/lib/utils_misc';
@@ -718,7 +718,7 @@ export const useProfileStore = defineStore('profile', {
             } catch (err) {
                 console.log("Error Downloading profiles from:", config.returnUrls.profiles)
 
-                alert('Could not download the profiles, unable to continue.')
+                if (shouldAlertFetchError(err)) alert('Could not download the profiles, unable to continue.') // BLUECORE: skip alert on redirect
                 console.error(err);
             }
 
@@ -731,7 +731,7 @@ export const useProfileStore = defineStore('profile', {
                 startingPointData = await response.json()
             } catch (err) {
                 console.log("Error Downloading Starting Points from:", config.returnUrls.starting)
-                alert('Could not download the starting points, unable to continue.')
+                if (shouldAlertFetchError(err)) alert('Could not download the starting points, unable to continue.') // BLUECORE: skip alert on redirect
                 console.error(err);
             }
 
