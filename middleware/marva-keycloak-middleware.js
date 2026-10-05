@@ -12,8 +12,12 @@ const PORT = Number(env.MARVA_MW_PORT)
 const BASE_PATH =  '/marva/util'
 const MARVA_REDIRECT = ( env.MARVA_REDIRECT_BASE || "http://localhost/marva/" )
 
-const KEYCLOAK_ISSUER_EXTERNAL = `${env.KEYCLOAK_EXTERNAL_URL }/realms/bluecore`
-const KEYCLOAK_ISSUER_INTERNAL = `${env.KEYCLOAK_INTERNAL_URL}/realms/bluecore`
+// Strip trailing slashes: a "//realms" path doesn't match Keycloak's cookie path,
+// so the browser's SSO session would be ignored and a new one created.
+const KEYCLOAK_EXTERNAL_BASE = env.KEYCLOAK_EXTERNAL_URL.replace(/\/+$/, '')
+const KEYCLOAK_INTERNAL_BASE = env.KEYCLOAK_INTERNAL_URL.replace(/\/+$/, '')
+const KEYCLOAK_ISSUER_EXTERNAL = `${KEYCLOAK_EXTERNAL_BASE}/realms/bluecore`
+const KEYCLOAK_ISSUER_INTERNAL = `${KEYCLOAK_INTERNAL_BASE}/realms/bluecore`
 const KEYCLOAK_REDIRECT_URI = ( env.BLUECORE_STACK_KEYCLOAK_REDIRECT_URI || `http://localhost:${PORT}${BASE_PATH}/auth/callback`)
 
 const UPSTREAM_UTIL_BASE = `${env.MARVA_UTIL_PATH}/marva/util`
