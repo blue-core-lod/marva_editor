@@ -29,6 +29,7 @@ import UpdateAvailableModal from "@/components/general/UpdateAvailableModal.vue"
 
 
 
+import { watchSsoSession } from '@/bluecore/sso' // BLUECORE
 import { useConfigStore } from '@/stores/config'
 import { useProfileStore } from '@/stores/profile'
 import { usePreferenceStore } from '@/stores/preference'
@@ -134,6 +135,14 @@ export default {
     } else {
       // Start background JWT refresh timer
       this.preferenceStore.startJwtRefreshTimer(this.configStore.returnUrls.util)
+
+      // BLUECORE: show the expired banner when the Keycloak session ends elsewhere (e.g. Sinopia logout)
+      watchSsoSession(() => {
+        window.localStorage.removeItem('marva_jwt')
+        this.preferenceStore.jwt = null
+        this.preferenceStore.ssoUser = null
+        this.preferenceStore.ssoSessionExpired = true
+      })
 
       // Fetch feature flags for the authenticated user
       this.preferenceStore.fetchFeatureFlags(this.configStore.returnUrls.util)
