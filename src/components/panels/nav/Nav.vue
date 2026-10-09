@@ -68,6 +68,7 @@ import FindReplaceModal from '../edit/modals/FindReplaceModal.vue'
 import StatusIndicator from './nav_components/StatusIndicator.vue'
 import RecordHistory from './nav_components/RecordHistory.vue'
 import SystemStatus from './nav_components/SystemStatus.vue'
+import { bluecoreExportMenuItem } from '@/bluecore/export' // BLUECORE
 
 
 import TimeAgo from 'javascript-time-ago'
@@ -897,6 +898,8 @@ export default {
             }
           )
         }
+        // ## BLUECORE LSP EXPORT ##
+        if (config.returnUrls.exportToCatalog) {  menu.push(bluecoreExportMenuItem(config.returnUrls.exportToCatalog, this.activeProfile))}
       }
 
       if (this.activeProfile.id && this.$route.name == 'Edit') {
