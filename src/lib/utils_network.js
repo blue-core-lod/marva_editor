@@ -289,12 +289,12 @@ const utilsNetwork = {
         let id = response.headers.get("x-uri").split("/").at(-1)
         let payload = {
             processor: 'lcAuthorities',
-            url: ["https://id.loc.gov/suggest2/?q="+id],
+            url: ["https://id.loc.gov/suggest2/?q="+id + "&memberOf=-http://id.loc.gov/entities/subjects/collection_SubjectEntities"],
             searchValue: id,
             subjectSearch: true,
             signal: this.controllers.exactSubject.signal,
         }
-        results = this.searchComplex(payload)
+        results = await this.searchComplex(payload)
       } catch(err){
         return []
       }
@@ -309,9 +309,10 @@ const utilsNetwork = {
     * @param {string} url - the URL to ask for, if left blank it just pulls in the profiles
     * @param {boolean} json - if defined and true will treat the call as a json request, addding some headers to ask for json
     * @param {signal} signal - signal that will be used to abort the call if needed
+    * @param {object} status - optional object that will be populated with the HTTP status of the response (status.code, status.ok, status.url, status.error)
     * @return {object|string} - returns the JSON object parsed into JS Object or the text body of the response depending if it is json or not
     */
-    fetchSimpleLookup: async function(url, json, signal=null) {
+    fetchSimpleLookup: async function(url, json, signal=null, status=null) {
       const bluecoreRequest = applyBluecoreLookupRequest(url || config.profileUrl)
       url = bluecoreRequest.url
       if (url.includes("id.loc.gov")){
@@ -347,6 +348,11 @@ const utilsNetwork = {
       let data = null
       try{
         let response = await fetch(url,options);
+        if (status){
+          status.code = response.status
+          status.ok = response.ok
+          status.url = url
+        }
         if (response.status == 404){
           return false
         }
@@ -364,6 +370,12 @@ const utilsNetwork = {
           // console.error("There was an error retriving the record from ", url, ". Likely from the search being aborted because the user was typing.");
         }else{
           console.error(err)
+          if (status && !status.code){
+            // the request itself failed (network error, etc.) rather than the server answering with an error code
+            status.error = err
+            status.ok = false
+            status.url = url
+          }
         }
         return false
         // Handle errors here
@@ -548,7 +560,8 @@ const utilsNetwork = {
     * Looks for instances by LCCN against ID, returns into for them to be displayed and load the resource
     * @param {searchPayload} searchPayload - the {@link searchPayload} to look for
     * @param {allowAbort} --
-    * @return {array} - An array of {@link searchComplexResult} results
+    * @return {array} - An array of {@link searchComplexResult} results. Any backend HTTP errors (4xx/5xx or a failed request) are
+    *  recorded on searchPayload.errors as an array of {url, status, error} so the caller can warn the user.
     */
     searchComplex: async function(searchPayload, blast=true){
       // console.log("searchPayload",searchPayload)
@@ -576,6 +589,7 @@ const utilsNetwork = {
         }
 
         let results = []
+        searchPayload.errors = []
         for (let url of urlTemplate) {
             // kind of hack, change to the public endpoint if we are in dev or public mode
             if (returnUrls.dev || returnUrls.publicEndpoints){
@@ -611,7 +625,14 @@ const utilsNetwork = {
               url = url.replace('searchtype=<TYPE>','searchtype=keyword')
             }
 
-            let r = await this.fetchSimpleLookup(url, false, searchPayload.signal)
+            let httpStatus = {}
+            let r = await this.fetchSimpleLookup(url, false, searchPayload.signal, httpStatus)
+
+            // the backend answered with an error (400/500 etc.) or the request failed outright, note it so the UI can warn the user
+            if (httpStatus.ok === false && httpStatus.code != 404){
+              searchPayload.errors.push({url: url, status: httpStatus.code || null, error: httpStatus.error || null})
+            }
+            if (!r){ r = {} }
 
             //Config only allows 25 results, this will add something to the results
             // to let the user know there are more names.
@@ -1923,7 +1944,7 @@ const utilsNetwork = {
           resultsChildren = resultsChildren.filter((r)=>{ return (!r.literal) })
           resultsChildrenSubDiv = resultsChildrenSubDiv.filter((r)=>{ return (!r.literal) })
 
-          resultsExactName = resultsExactName.filter((term) =>  Object.keys(term).includes("suggestLabel") )
+          // resultsExactName = resultsExactName.filter((term) =>  Object.keys(term).includes("suggestLabel") )
           resultsExactSubject = resultsExactSubject.filter((term) =>  Object.keys(term).includes("suggestLabel") )
 
           // console.log("Yeeth")
@@ -1983,14 +2004,16 @@ const utilsNetwork = {
 
           // there's an exact match on the Known-Label lookup
           let exact = resultsExactSubject.concat(resultsExactName)
-          if (exact.length == 1){ // if there's only 1 exact match, use it.
+          if (exact.length > 0){ // if there's only 1 exact match, use it.
             for (let r of exact){
-              result.resultType = 'KNOWN-LABEL'
-              if (!result.hit){ result.hit = [] }
-              r.heading = heading
-              result.hit.push(r)
-              foundHeading = true
-              break
+              if ( heading.label.toLowerCase().trim().replace(/\s+/g,' ').replace(/[\p{P}$+<=>^`|~]/gu, '') == r.label.toLowerCase().trim().replace(/[\p{P}$+<=>^`|~]/gu, '') || (r.vlabel && heading.label.toLowerCase().trim().replace(/\s+/g,' ').replace(/[\p{P}$+<=>^`|~]/gu, '') == r.vlabel.toLowerCase().trim().replace(/[\p{P}$+<=>^`|~]/gu, '')) ){
+                result.resultType = 'KNOWN-LABEL'
+                if (!result.hit){ result.hit = [] }
+                r.heading = heading
+                result.hit.push(r)
+                foundHeading = true
+                break
+              }
             }
             if (foundHeading){ continue }
           }
@@ -2508,19 +2531,18 @@ const utilsNetwork = {
 
 
       this.subjectSearchActive = true
-      let namesUrl = useConfigStore().lookupConfig['http://preprod.id.loc.gov/authorities/names'].modes[0]['NAF Auth Names'].url.replace('<QUERY>',searchVal).replace('&count=30','&count='+numResultsNames).replace("<OFFSET>", "1")+'&keepdiacritics=true'
+      let namesUrl = useConfigStore().lookupConfig['http://preprod.id.loc.gov/authorities/names'].modes[0]['NAF Auth Names'].url.replace('<QUERY>',searchVal).replace('&count=30','&count='+numResultsNames).replace("<OFFSET>", "1")+'&keepdiacritics=true&memberOf=http://id.loc.gov/authorities/names/collection_NamesAuthorizedHeadings&memberOf=-http://id.loc.gov/authorities/names/collection_FRBRExpression'
       let namesGeoUrl = useConfigStore().lookupConfig['http://preprod.id.loc.gov/authorities/names'].modes[0]['NAF Geographic'].url.replace('<QUERY>',searchVal).replace('&count=30','&count='+numResultsNames).replace("<OFFSET>", "1")+'&memberOf=http://id.loc.gov/authorities/names/collection_NamesAuthorizedHeadings&rdftype=Geographic&keepdiacritics=true'
-      let namesUrlSubdivision = useConfigStore().lookupConfig['http://preprod.id.loc.gov/authorities/names'].modes[0]['NAF All'].url.replace('<QUERY>',searchVal).replace('&count=30','&count=5').replace("<OFFSET>", "1")+'&keepdiacritics=true&memberOf=http://id.loc.gov/authorities/subjects/collection_Subdivisions'
+      let namesUrlSubdivision = useConfigStore().lookupConfig['http://preprod.id.loc.gov/authorities/names'].modes[0]['NAF All'].url.replace('<QUERY>',searchVal).replace('&count=30','&count='+numResultsNames).replace("<OFFSET>", "1")+'&keepdiacritics=true&memberOf=http://id.loc.gov/authorities/subjects/collection_Subdivisions'
 
       let subjectUrlComplexSearchVal = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',searchVal).replace('&count=25','&count='+numResultsComplex).replace("<OFFSET>", "1")+'&rdftype=ComplexType'+'&memberOf=http://id.loc.gov/authorities/subjects/collection_LCSHAuthorizedHeadings'
       let subjectUrlComplex = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',complexVal).replace('&count=25','&count='+numResultsComplex).replace("<OFFSET>", "1")+'&rdftype=ComplexType'+'&memberOf=http://id.loc.gov/authorities/subjects/collection_LCSHAuthorizedHeadings'
       let subjectUrlSimple = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',searchVal).replace('&count=25','&count='+numResultsSimple).replace("<OFFSET>", "1")+'&rdftype=SimpleType'+'&memberOf=http://id.loc.gov/authorities/subjects/collection_LCSHAuthorizedHeadings&memberOf=-http://id.loc.gov/authorities/subjects/collection_GenreFormSubdivisions'
 
-      let subjectUrlSimpleSubdivison = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',searchVal).replace('&count=25','&count=5').replace("<OFFSET>", "1")+'&rdftype=SimpleType&memberOf=http://id.loc.gov/authorities/subjects/collection_Subdivisions&memberOf=-http://id.loc.gov/authorities/subjects/collection_GenreFormSubdivisions'
-      let subjectUrlSimpleGeoSubdivison = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',searchVal).replace('&count=25','&count=5').replace("<OFFSET>", "1")+'&rdftype=SimpleType&memberOf=http://id.loc.gov/authorities/subjects/collection_GeographicSubdivisions'
-      let subjectUrlTemporal = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',searchVal).replace('&count=25','&count=5').replace("<OFFSET>", "1")+'&memberOf=http://id.loc.gov/authorities/subjects/collection_TemporalSubdivisions'
-      let subjectUrlGenre = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',searchVal).replace('&count=25','&count=5').replace("<OFFSET>", "1")+'&rdftype=GenreForm'
-
+      let subjectUrlSimpleSubdivison = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',searchVal).replace('&count=25', '&count='+numResultsSimple).replace("<OFFSET>", "1")+'&rdftype=SimpleType&memberOf=http://id.loc.gov/authorities/subjects/collection_Subdivisions&memberOf=-http://id.loc.gov/authorities/subjects/collection_GenreFormSubdivisions'
+      let subjectUrlSimpleGeoSubdivison = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',searchVal).replace('&count=25','&count='+numResultsSimple).replace("<OFFSET>", "1")+'&rdftype=SimpleType&memberOf=http://id.loc.gov/authorities/subjects/collection_GeographicSubdivisions'
+      let subjectUrlTemporal = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',searchVal).replace('&count=25','&count='+numResultsSimple).replace("<OFFSET>", "1")+'&memberOf=http://id.loc.gov/authorities/subjects/collection_TemporalSubdivisions'
+      let subjectUrlGenre = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',searchVal).replace('&count=25','&count='+numResultsSimple).replace("<OFFSET>", "1")+'&rdftype=GenreForm'
       // To find Complex "Use"s for simple headings
       let subjectUrlSimpleComplex = useConfigStore().lookupConfig['http://id.loc.gov/authorities/subjects'].modes[0]['LCSH All'].url.replace('<QUERY>',complexVal).replace('&count=25','&count='+numResultsSimple).replace("<OFFSET>", "1")+'&rdftype=SimpleType'+'&memberOf=http://id.loc.gov/authorities/subjects/collection_LCSHAuthorizedHeadings'
 
@@ -2959,7 +2981,8 @@ const utilsNetwork = {
       let results = {
         'subjectsSimple': pos == 0 ? resultsSubjectsSimple : resultsPayloadSubjectsSimpleSubdivision,
         'subjectsComplex': complexHeadings,
-        'names': pos == 0 ? resultsNames.concat(resultsNamesGeo).sort((a,b) => a.suggestLabel.toLowerCase() > b.suggestLabel.toLowerCase() ? 1 : a.suggestLabel.toLowerCase() < b.suggestLabel.toLowerCase() ? -1 : 1) : resultsNamesSubdivision,
+        // 'names': pos == 0 ? resultsNames.concat(resultsNamesGeo).sort((a,b) => a.suggestLabel.toLowerCase() > b.suggestLabel.toLowerCase() ? 1 : a.suggestLabel.toLowerCase() < b.suggestLabel.toLowerCase() ? -1 : 1) : resultsNamesSubdivision,
+        'names': pos == 0 ? resultsNames.concat(resultsNamesGeo.filter((item) => !resultsNames.some((o) => o.label == item.label))).sort((a,b) => a.suggestLabel.toLowerCase() > b.suggestLabel.toLowerCase() ? 1 : a.suggestLabel.toLowerCase() < b.suggestLabel.toLowerCase() ? -1 : 1) : resultsNamesSubdivision,
         'hierarchicalGeographic': (mode !== 'GEO') ? [] : resultsHierarchicalGeographic,
         'subjectsChildren': pos == 0 ? resultsChildrenSubjects : resultsChildrenSubjectsSubdivisions,
         'subjectsChildrenComplex': resultsChildrenSubjectsComplex,
@@ -3576,7 +3599,9 @@ const utilsNetwork = {
       } else {
         searchTerm = search.toUpperCase()
       }
-      let urlSearch = "lds/browse.xqy?bq=" + searchTerm +"&browse-order=" + dir + "&browse=class" + details + "&mime=json"
+      // the browse endpoint path can be overridden per region (bibframe.org uses a different endpoint)
+      let browsePath = useConfigStore().returnUrls.shelfListingPath || "lds/browse.xqy"
+      let urlSearch = browsePath + "?bq=" + searchTerm +"&browse-order=" + dir + "&browse=class" + details + "&mime=json"
 
       // try{
         //let req = await fetch(useConfigStore().returnUrls.shelfListing + `browse/class/${dir}/${search}.json` )
@@ -3752,12 +3777,35 @@ const utilsNetwork = {
       return { status: r.status, data: r.status === 503 ? null : await r.json() }
     },
 
+    /**
+    * Ask the util service for WorldCat metadata related to an ISBN.
+    * A WorldCat failure is not critical, on any error (network, non-200, non-JSON body,
+    * or missing credentials on the backend) an empty result is returned so the rest of
+    * the linked data build (Google Books, contributors, etc.) can continue.
+    * @param {string} isbn
+    * @return {object} - {status, results:{isbns:[], records:[]}}
+    */
     async linkedDataBaseRelated(isbn){
       let returnUrls = useConfigStore().returnUrls
-      let r = await fetch(returnUrls.util + 'worldcat/relatedmeta/:' + isbn, { headers: getAuthHeaders() })
-      let data = await r.json()
-      console.log("linkedDataBaseRelated data:",data)
-      return data
+      let empty = { status: { status: 'error' }, results: { isbns: [], records: [] } }
+      try {
+        let r = await fetch(returnUrls.util + 'worldcat/relatedmeta/:' + isbn, { headers: getAuthHeaders() })
+        if (!r.ok){
+          console.warn("linkedDataBaseRelated: worldcat request failed", r.status)
+          return empty
+        }
+        let data = await r.json()
+        console.log("linkedDataBaseRelated data:",data)
+        if (!data || !data.results){
+          return empty
+        }
+        if (!Array.isArray(data.results.isbns)){ data.results.isbns = [] }
+        if (!Array.isArray(data.results.records)){ data.results.records = [] }
+        return data
+      } catch (e) {
+        console.warn("linkedDataBaseRelated: worldcat lookup error", e)
+        return empty
+      }
     },
 
 

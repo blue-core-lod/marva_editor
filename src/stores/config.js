@@ -4,6 +4,22 @@ import scriptShifterLangCodes from '@/lib/scriptShifterLangCodes.json';
 import bluecore from '@/bluecore/environment';
 import { isBluecoreMarva } from '@/bluecore/utils';
 
+/**
+* If a region sets displayAsProduction, turn off the UI-only feature flags that are
+* not on in production so the app looks like production while still using that
+* region's endpoints. Flags that control endpoints or posting are left alone.
+* @param {object} region - a regionUrls entry
+* @return {object}
+*/
+const applyDisplayAsProduction = (region) => {
+  if (!region || !region.displayAsProduction){ return region }
+  return {
+    ...region,
+    enableStateRecorder: false,
+    enableWorkflows: false,
+  }
+}
+
 export const useConfigStore = defineStore('config', {
   state: () => ({
 
@@ -80,9 +96,15 @@ export const useConfigStore = defineStore('config', {
         devFakePosting: true,
         displayLCOnlyFeatures: true,
         enableStateRecorder: true,
+        // turns on the Workflows feature without needing the "workflows" feature flag from the backend
+        enableWorkflows: true,
         simpleLookupLang: 'en',
         lcap: 'https://c2vwscf01.loc.gov/cflsops/toolkit-training-lcsg/lcap-productivity/marva/bibId/',
         folioBase: 'https://lcsg.catalog.lcap.loc.gov',
+
+        // message of the day, shown as a dismissable banner at the top of every page.
+        // plain text or simple html, empty string / missing = no banner
+        motd: '',
       },
 
       externalDev:{
@@ -101,20 +123,29 @@ export const useConfigStore = defineStore('config', {
         env : 'staging',
         dev: true,
         externalDev: true,
+        // make the UI look like production (no yellow nav bar, no STAGING prefix, no DCTap menu)
+        // while still using the staging/local endpoints above
+        displayAsProduction: false,
         devFakePosting: true,
         displayLCOnlyFeatures: true,
         enableStateRecorder: true,
+        enableWorkflows: true,
         simpleLookupLang: 'en',
         publicEndpoints:true,
         lcap: 'https://c2vwscf01.loc.gov/cflsops/toolkit-training-lcsg/lcap-productivity/marva/bibId/',
         folioBase: 'https://lcsg.catalog.lcap.loc.gov',
         bfdb : 'https://preprod-8230.id.loc.gov/',
+        // the public id.loc.gov serves the shelflisting browse at a different path than the preprod servers
+        shelfListing: 'https://id.loc.gov/',
+        shelfListingPath: 'controllers/xqapi-shelflist.xqy',
         isBibframeDotOrg: false,
 
         folioMLCEndpoint: 'http://localhost:9401/marva/util/folio/next-mlc/staging',
 
         dancerEnabled: true,
         dancerWorkspaceList: "http://localhost:9401/marva/dancer/api/serve/workspaces",
+
+        motd: '',
 
       },
 
@@ -136,7 +167,7 @@ export const useConfigStore = defineStore('config', {
 
         worldCat: 'https://preprod-3001.id.loc.gov/marva/util/worldcat/',
         copyCatUpload: 'https://preprod-3001.id.loc.gov/marva/util/copycat/upload/stag', // change ports for production
-        lcap: 'https://c2vwscf01.loc.gov/cflsops/toolkit-training-lcsg/lcap-productivity/marva/bibId/',
+        lcap: 'https://staging.lcsg.toolkit.lcap.loc.gov/lcap-productivity/marva/bibId/',
         folioBase: 'https://lcsg.catalog.lcap.loc.gov',
 
         folioMLCEndpoint: 'https://preprod-3001.id.loc.gov/marva/util/folio/next-mlc/staging',
@@ -150,6 +181,8 @@ export const useConfigStore = defineStore('config', {
 
         dancerEnabled: true,
         dancerWorkspaceList: "https://editor.id.loc.gov/marva/dancer/api/serve/workspaces/",
+
+        motd: '',
 
 
       },
@@ -188,6 +221,8 @@ export const useConfigStore = defineStore('config', {
         displayLCOnlyFeatures: true,
         enableStateRecorder: false,
         simpleLookupLang: 'en',
+
+        motd: '',
       },
 
       bibframeDotOrg:{
@@ -197,6 +232,9 @@ export const useConfigStore = defineStore('config', {
         scriptshifter  :  'https://bibframe.org/scriptshifter/',
         publish: 'https://bibframe.org/marva/util/publish/production',
         validate: 'https://bibframe.org/marva/util/validate/stage',
+        shelfListing: 'https://id.loc.gov/',
+        // path (relative to shelfListing) of the shelf list browse endpoint, other regions use the default 'lds/browse.xqy'
+        shelfListingPath: 'controllers/xqapi-shelflist.xqy',
         bfdb : 'https://id.loc.gov/',
         profiles: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-profiles.json',
         starting: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-starting.json',
@@ -208,8 +246,20 @@ export const useConfigStore = defineStore('config', {
         simpleLookupLang: 'en',
         isBibframeDotOrg: true,
 
+        // Features that are hidden / disabled on bibframe.org unless the user is a demo user (see demoFeatureUsers)
+        restrictedFeatures: ['marvaScan', 'subjectFinder', 'linkedData'],
+        // Public demo carve out: if the user's name (catInitals) or cat code contains one of these
+        // strings (case-insensitive) the restrictedFeatures are enabled for them, bypassing the
+        // normal per-user feature flag / permission checks.
+        demoFeatureUsers: ['aidemo'],
+
+        // Adobe Launch analytics script, injected at startup only for this region (see loadAnalyticsScript)
+        analyticsScript: 'https://assets.adobedtm.com/f94f5647937d/05ab40b58039/launch-60d4ca033ceb.min.js',
+
         dancerEnabled: true,
         dancerWorkspaceList: "https://bibframe.org/dancer/api/serve/workspaces/",
+
+        motd: '',
 
 
       },
@@ -228,7 +278,10 @@ export const useConfigStore = defineStore('config', {
         env : 'production',
         displayLCOnlyFeatures: true,
         publicEndpoints:true,
+        enableWorkflows: true,
         simpleLookupLang: 'en',
+
+        motd: '',
       },
 
     },
@@ -258,6 +311,8 @@ export const useConfigStore = defineStore('config', {
   procInfoNewWorkInstance: "create work",
 
   showUpdateAvailableModal:false,
+  // pixel height of the message of the day banner currently showing (0 when hidden), set by MotdBanner.vue
+  motdHeight: 0,
 
   showNonLatinBulkModal: false,
   showNonLatinAgentModal: false,
@@ -535,11 +590,11 @@ export const useConfigStore = defineStore('config', {
       "processor" : 'lcAuthorities',
       "modes":[
         {
-          'NAF Auth Names':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&rdftype=Name&count=25&offset=<OFFSET>&searchtype=<TYPE>"},
+          'NAF Auth Names':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>&searchtype=<TYPE>"},
           'NAF Personal Names':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&rdftype=PersonalName&count=25&offset=<OFFSET>&searchtype=<TYPE>"},
           'NAF Corporate Name':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&rdftype=CorporateName&count=25&offset=<OFFSET>&searchtype=<TYPE>"},
           'NAF Conference Name':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&rdftype=ConferenceName&count=25&offset=<OFFSET>&searchtype=<TYPE>"},
-          'NAF Geographic':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&memberOf=http://id.loc.gov/authorities/names/collection_NamesAuthorizedHeadings&rdftype=Geographic&count=25&offset=<OFFSET>&searchtype=<TYPE>"},
+          'NAF Geographic':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>&searchtype=<TYPE>"},
           'NAF All':{"url":"https://id.loc.gov/authorities/names/suggest2/?q=<QUERY>&count=25&offset=<OFFSET>"},
         }
       ]
@@ -551,11 +606,11 @@ export const useConfigStore = defineStore('config', {
       "processor" : 'lcAuthorities',
       "modes":[
         {
-          'NAF Auth Names':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&rdftype=Name&count=30&offset=<OFFSET>&searchtype=<TYPE>"},
+          'NAF Auth Names':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&count=30&offset=<OFFSET>&searchtype=<TYPE>"},
           'NAF Personal Names':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&rdftype=PersonalName&count=30&offset=<OFFSET>&searchtype=<TYPE>"},
           'NAF Corporate Name':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&rdftype=CorporateName&count=30&offset=<OFFSET>&searchtype=<TYPE>"},
           'NAF Conference Name':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&rdftype=ConferenceName&count=30&offset=<OFFSET>&searchtype=<TYPE>"},
-          'NAF Geographic':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&memberOf=http://id.loc.gov/authorities/names/collection_NamesAuthorizedHeadings&rdftype=Geographic&count=30&offset=<OFFSET>&searchtype=<TYPE>"},
+          'NAF Geographic':{"url":"http://preprod.id.loc.gov/authorities/names/suggest2/?q=<QUERY>&count=30&offset=<OFFSET>&searchtype=<TYPE>"},
           'NAF All':{"url":"https://id.loc.gov/authorities/names/suggest2/?q=<QUERY>&count=30&offset=<OFFSET>"},
         }
       ]
@@ -646,8 +701,8 @@ export const useConfigStore = defineStore('config', {
 
       "modes":[
         {
-          'hier':{"url":"https://preprod-8080.id.loc.gov/suggest2/?q=<QUERY>&count=25&rdftype=HierarchicalGeographic", "all":true},
-          'All': {"url":"https://preprod-8080.id.loc.gov/suggest2/?q=<QUERY>&count=25&rdftype=HierarchicalGeographic&memberOf=http://id.loc.gov/authorities/subjects/collection_GeographicSubdivisions", "all":true}
+          'hier':{"url":"https://preprod-8080.id.loc.gov/authorities/suggest2/?q=<QUERY>&count=25&rdftype=HierarchicalGeographic", "all":true},
+          'All': {"url":"https://preprod-8080.id.loc.gov/authorities/suggest2/?q=<QUERY>&count=25&rdftype=HierarchicalGeographic&memberOf=http://id.loc.gov/authorities/subjects/collection_GeographicSubdivisions", "all":true}
         }
       ]
     },
@@ -659,7 +714,7 @@ export const useConfigStore = defineStore('config', {
       "processor" : 'lcAuthorities',
       "modes":[
         {
-          'All':{"url":"https://preprod-8080.id.loc.gov/suggest2/?q=<QUERY>&count=25&rdftype=HierarchicalGeographic", "all":true},
+          'All':{"url":"https://preprod-8080.id.loc.gov/authorities/suggest2/?q=<QUERY>&count=25&rdftype=HierarchicalGeographic", "all":true},
         }
       ]
     },
@@ -962,7 +1017,7 @@ export const useConfigStore = defineStore('config', {
         }else if (window && window.location.href.includes('bibframe.org')){
           return state.regionUrls.bibframeDotOrg
         }else if (window && window.location.href.includes('localhost:4444')){
-          return state.regionUrls.externalDev
+          return applyDisplayAsProduction(state.regionUrls.externalDev)
         }else if (window && window.location.href.includes('localhost:5555')){
           console.log(">>>>>>>playwrightTestConfig<<<<<<<<<")
           return state.regionUrls.playwrightTestConfig
@@ -993,6 +1048,22 @@ export const useConfigStore = defineStore('config', {
         url = url.replace('http://id.loc.gov/',urls.bfdb)
       }
       return url
+    },
+
+    /**
+    * Injects the region's analytics script tag into the document head, if the
+    * current region config defines one (currently only bibframeDotOrg does).
+    *
+    * @return {void} -
+    */
+    loadAnalyticsScript() {
+      let src = this.returnUrls.analyticsScript
+      if (!src || typeof document === 'undefined') return
+      if (document.querySelector(`script[src="${src}"]`)) return
+      let script = document.createElement('script')
+      script.src = src
+      script.async = true
+      document.head.appendChild(script)
     },
 
     /**

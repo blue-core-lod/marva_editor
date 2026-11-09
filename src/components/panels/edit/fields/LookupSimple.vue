@@ -1484,6 +1484,7 @@ export default {
   color:gray;
 }
 .bfcode-display-mode-holder-value{
+  display: flex;
   flex-grow: 1;
 }
 
@@ -1529,6 +1530,11 @@ export default {
 .lookup-fake-input-text{
   flex-grow: 1;
 }
+
+.lookup-fake-input-text input::placeholder{
+  color: v-bind("preferenceStore.returnValue('--c-edit-main-placeholder-font-color')");
+}
+
 .lookup-fake-input-text input{
   width: 100%;
   outline: none;

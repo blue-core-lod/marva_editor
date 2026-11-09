@@ -2141,7 +2141,6 @@ export const useProfileStore = defineStore('profile', {
                 // }else{
 
 
-
                 // }
             } else {
                 console.error('removeValueSimple: Cannot locate the component by guid', componentGuid, this.activeProfile)
@@ -2610,7 +2609,7 @@ export const useProfileStore = defineStore('profile', {
                     let uneditable = false
 
                     // if it is deepHierarchy then then we are copy pasting what came into the system and they cann change it anyway.
-                    if (pt.deepHierarchy) { uneditable = true }
+                    // if (pt.deepHierarchy) { uneditable = true }
 
 
                     if (URI && label) {
@@ -2753,7 +2752,7 @@ export const useProfileStore = defineStore('profile', {
                     }
 
                     // if it is deepHierarchy then then we are copy pasting what came into the system and they cann change it anyway.
-                    if (pt.deepHierarchy) { uneditable = true }
+                    // if (pt.deepHierarchy) { uneditable = true }
 
                     if (URI && label) {
                         values.push({
@@ -4377,10 +4376,10 @@ export const useProfileStore = defineStore('profile', {
 
                 if (rtId.indexOf(":Work") > -1) {
                     for (let ptId in this.activeProfile.rt[rtId].pt) {
-                        if (this.activeProfile.rt[rtId].pt[ptId]['@guid'] == componentGuid) {
+                        // if (this.activeProfile.rt[rtId].pt[ptId]['@guid'] == componentGuid) {
                             work = this.activeProfile.rt[rtId]
                             break
-                        }
+                        // }
                     }
                     if (work) { break }
                 }
@@ -4389,29 +4388,6 @@ export const useProfileStore = defineStore('profile', {
             if (work) {
                 for (let ptId of work.ptOrder) {
                     let pt = JSON.parse(JSON.stringify(work.pt[ptId]))
-                    /*
-                    //
-                    {
-                      "@root": "http://id.loc.gov/ontologies/bibframe/title",
-                      "http://id.loc.gov/ontologies/bibframe/title": [
-                          {
-                              "@guid": "dYC2wKS5RkmPcP6rB7DH8m",
-                              "@type": "http://id.loc.gov/ontologies/bibframe/Title",
-                              "http://id.loc.gov/ontologies/bibframe/mainTitle": [
-                                  {
-                                      "@guid": "th7wNkaXeBQxj4Gqc3PZKH",
-                                      "http://id.loc.gov/ontologies/bibframe/mainTitle": "Ch'ŏnggyech'ŏn Taehakch'ŏn ch'aekpang kŏri"
-                                  },
-                                  {
-                                      "@guid": "49g8LszgTg4d6GzN7fBFhK",
-                                      "http://id.loc.gov/ontologies/bibframe/mainTitle": "청계천 대학천 책방 거리",
-                                      "@language": "ko-hang"
-                                  }
-                              ]
-                          }
-                      ]
-                  }
-                  */
 
                     if (pt && pt.propertyURI == 'http://id.loc.gov/ontologies/bibframe/title') {
                         let titleUserValue = pt.userValue
@@ -5087,6 +5063,7 @@ export const useProfileStore = defineStore('profile', {
             */
 
         insertDefaultValuesComponent: async function (componentGuid, structure, pp = false) {
+            // 2023416867
             // console.log(componentGuid)
             // console.log("structure",structure)
 
@@ -5602,6 +5579,7 @@ export const useProfileStore = defineStore('profile', {
                     for (let key in this.activeProfile.rt[pt.parentId].pt[pt.id].userValue) {
                         if (!key.startsWith('@')) {
                             delete this.activeProfile.rt[pt.parentId].pt[pt.id].userValue[key]
+                            delete this.activeProfile.rt[pt.parentId].pt[pt.id].activeType
 
                             // Cleanup for components that are uneditable
                             if (Object.keys(this.activeProfile.rt[pt.parentId].pt[pt.id]).includes("xmlSource")) {
@@ -8243,6 +8221,9 @@ export const useProfileStore = defineStore('profile', {
             }
             // console.log(":linkedDatalinkedData",linkedData)
 
+            // isbns we have already sent to google books, so we don't query the same one twice
+            let googleQueriedIsbns = new Set()
+
             for (let isbn of linkedData.isbn) {
 
                 let baseData = await utilsNetwork.linkedDataBaseRelated(isbn)
@@ -8269,20 +8250,25 @@ export const useProfileStore = defineStore('profile', {
 
 
 
-                if (baseData.results.isbns && baseData.results.isbns.length > 0) {
-                    let googleBookData = await utilsNetwork.linkedDataAllGoogleBooksByIsbns(baseData.results.isbns)
-                    googleBookData = utilsNetwork.linkedDataExtractGoogleBooks(googleBookData)
-                    // console.log("googleBookData",googleBookData)
+                // fire google books with the record's own isbn plus anything worldcat found, regardless of the worldcat result
+                let googleIsbns = [...new Set([isbn].concat(baseData.results.isbns || []))].filter((v) => v && !googleQueriedIsbns.has(v))
+                googleIsbns.forEach((v) => googleQueriedIsbns.add(v))
 
-                    googleBookData.filter((v) => (v.dataType == 'toc'))
+                if (googleIsbns.length > 0) {
+                    try {
+                        let googleBookData = await utilsNetwork.linkedDataAllGoogleBooksByIsbns(googleIsbns)
+                        googleBookData = utilsNetwork.linkedDataExtractGoogleBooks(googleBookData)
+                        // console.log("googleBookData",googleBookData)
 
-                    linkedData.subtitle = linkedData.subtitle.concat(googleBookData.filter((v) => (v.dataType == 'subtitle')));
-                    linkedData.noteContent = linkedData.noteContent.concat(googleBookData.filter((v) => (v.dataType == 'description')));
-                    linkedData.noteTOC = linkedData.noteTOC.concat(googleBookData.filter((v) => (v.dataType == 'toc')));
-                    linkedData.thumbnail = linkedData.thumbnail.concat(googleBookData.filter((v) => (v.dataType == 'thumbnail')));
-                    linkedData.lcsh = linkedData.lcsh.concat(googleBookData.filter((v) => (v.dataType == 'subject')));
-
-
+                        linkedData.subtitle = linkedData.subtitle.concat(googleBookData.filter((v) => (v.dataType == 'subtitle')));
+                        linkedData.noteContent = linkedData.noteContent.concat(googleBookData.filter((v) => (v.dataType == 'description')));
+                        linkedData.noteTOC = linkedData.noteTOC.concat(googleBookData.filter((v) => (v.dataType == 'toc')));
+                        linkedData.thumbnail = linkedData.thumbnail.concat(googleBookData.filter((v) => (v.dataType == 'thumbnail')));
+                        linkedData.lcsh = linkedData.lcsh.concat(googleBookData.filter((v) => (v.dataType == 'subject')));
+                    } catch (e) {
+                        // google books is not critical either, keep going
+                        console.warn("buildLinkedData: google books lookup error", e)
+                    }
                 }
 
                 // if we got a hit on one of the isbns we can stop
@@ -8646,6 +8632,10 @@ export const useProfileStore = defineStore('profile', {
                         let label = source["http://www.w3.org/2000/01/rdf-schema#label"] ? source["http://www.w3.org/2000/01/rdf-schema#label"][0]["http://www.w3.org/2000/01/rdf-schema#label"] : ""
                         let sourceURI = source["@id"] ? source["@id"] : ""
 
+                        // a source given by URI alone (a converted WorldCat record names the scheme and nothing else): LC's own schemes
+                        if (/^https?:\/\/id\.loc\.gov\/(authorities\/(subjects|childrensSubjects|names)|vocabulary\/subjectSchemes\/(lcsh|cyac|naf))\/?$/.test(sourceURI)) {
+                            return true
+                        }
                         if (!label.includes("Library of Congress") && !label.includes("Children's and Young Adults")) {
                             return false
                         }
@@ -9240,7 +9230,239 @@ export const useProfileStore = defineStore('profile', {
             this.dataChanged()
         },
 
+        /**
+         * For subject headings in the form `GeoA--something--GeoB`
+         * catalogers need to create a reciprocal heading: `GeoB--something--GeoA`,
+         * try to do that for them with a click
+         * @param guid = the guid for the source component
+         * @param propertyPath = propertyPath for component
+         */
+        swapGeoHeadings: async function(guid, propertyPath){
+            let structure = this.returnStructureByComponentGuid(guid)
+            let userValue = structure.userValue["http://id.loc.gov/ontologies/bibframe/subject"][0]
+            let label = userValue["http://www.w3.org/2000/01/rdf-schema#label"][0]["http://www.w3.org/2000/01/rdf-schema#label"]
+            let components = userValue["http://www.loc.gov/mads/rdf/v1#componentList"]
+            let newPt = false
 
+            let componentsCopy = null
+            try {
+                componentsCopy = JSON.parse(JSON.stringify(components))
+                // swap the first and last
+                let first = componentsCopy.shift()
+                let last = componentsCopy.pop()
+                componentsCopy.unshift(last)
+                componentsCopy.push(first)
+            } catch {
+                componentsCopy = false
+            }
+
+            if (!userValue['@id'] && componentsCopy && componentsCopy.every((c) => c['@id'])){ // there's no singular URI for the string and everything has a URI, we can flip things around
+                let newSubject = []
+                let startPos = 0
+
+                for (let idx in componentsCopy){
+                    let component = componentsCopy[idx]
+                    let label = component["http://www.loc.gov/mads/rdf/v1#authoritativeLabel"][0]["http://www.loc.gov/mads/rdf/v1#authoritativeLabel"]
+                    let type = component['@type']
+                    let marcKey = null
+                    if (type.includes("Geographic") && idx == 0){
+                        marcKey = "151 $a" + label
+                    } else {
+                        if (type.includes("Geographic")){
+                        marcKey = "181 $z" + label
+                        } else {
+                        marcKey = "180 $x" + label
+                        }
+                    }
+                    let c = {
+                        "label": label,
+                        "uri": component['@id'],
+                        "id": idx,
+                        "type": component['@type'],
+                        "complex": false,
+                        "literal": false,
+                        "posStart": startPos,
+                        "posEnd": startPos + label.length + 1,
+                        "marcKey": marcKey
+                    }
+                    startPos = startPos + label.length + 3
+                    newSubject.push(c)
+                }
+                newPt = await this.duplicateComponentGetId(structure["@guid"], structure, structure.parentId, structure.id)
+                this.setValueSubject(newPt[1], newSubject, propertyPath)
+            } else {
+                // else, swap the subjects, search ID, and build the new subject, if possible
+                let parts = []
+                if (label.includes("‑‑")){
+                    parts = label.split('‑‑')
+                } else {
+                    parts = label.split('--')
+                }
+                let first = parts.shift()
+                let last = parts.pop()
+                parts.unshift(last)
+                parts.push(first)
+                let flipped = parts.join('--')
+
+                let exactPayloadName = {
+                    processor: 'lcAuthorities',
+                    url: ['https://preprod-8080.id.loc.gov/authorities/subject/label/' + flipped],
+                    searchValue: flipped,
+                    subjectSearch: true,
+                    signal: utilsNetwork.controllers.exactName.signal,
+                }
+
+                let results = await utilsNetwork.searchExact(exactPayloadName)
+                if (results[0] && results[0].uri){
+                    let newSubject = [
+                        {
+                        "complex": true,
+                        "id": 0,
+                        "label": flipped.replaceAll("--", "‑‑"),
+                        "literal": false,
+                        "posEnd": flipped.length,
+                        "posStart": 0,
+                        "type": "madsrdf:Topic",
+                        "uri": results[0].uri,
+                        "marcKey": results[0].extra.marcKeys[0]
+                        }
+                    ]
+                    newPt = await this.duplicateComponentGetId(structure["@guid"], structure, structure.parentId, structure.id)
+                    this.setValueSubject(newPt[1], newSubject, propertyPath)
+                } else {
+                    let value = ''
+                    for (let idx in componentsCopy){
+                        let part = componentsCopy[idx]
+                        let property = "http://www.loc.gov/mads/rdf/v1#authoritativeLabel"
+                        if (!part[property]){
+                        property = "http://www.w3.org/2000/01/rdf-schema#label"
+                        }
+                        let label = part[property][0][property]
+                        if (idx == 0){
+                        value = "$a" + label
+                        } else  if (part["@type"] == "http://www.loc.gov/mads/rdf/v1#Geographic"){
+                        value = value + "$z" + label
+                        } else {
+                        value = value + "$x" + label
+                        }
+                    }
+
+                    newPt = await this.duplicateComponentGetId(structure["@guid"], structure, structure.parentId, structure.id)
+                    let target = document.querySelector(`[data-field-guid='${newPt[1]}']`)
+                    target.value = value
+                    target.dispatchEvent(
+                        new Event("input", { bubbles: false, cancelable: true })
+                    )
+                }
+            }
+        },
+
+        addAllDefaults: function () {
+            for (let rt in this.activeProfile.rt) {
+                for (let pt in this.activeProfile.rt[rt].pt) {
+                    let component = this.activeProfile.rt[rt].pt[pt]
+                    let structure = this.returnStructureByComponentGuid(component['@guid'])
+                    if (structure.propertyLabel != 'Admin Metadata' || structure.adminMetadataType == 'primary') {
+                        if (component.valueConstraint.defaults.length > 0) {
+                        // top level component
+                        if (Object.keys(component.userValue).every(k => k.startsWith("@"))) { // it's empty
+                            this.insertDefaultValuesComponent(component['@guid'], structure)
+                            continue
+                        }
+                        }
+                        //go deeper
+                        for (let vRt of component.valueConstraint.valueTemplateRefs) {
+                            for (let template of this.rtLookup[vRt].propertyTemplates) {
+                                if (template.valueConstraint.defaults && template.valueConstraint.defaults.length > 0) {
+                                // for classifiction, we want to make sure we're only working on the currently selected template
+                                if (structure.propertyURI == 'http://id.loc.gov/ontologies/bibframe/classification') {
+                                    let selection = document.getElementById(structure['@guid'] + '-select')
+                                    let selected
+                                    let target
+                                    if (selection) {
+                                        selected = selection.options[selection.selectedIndex].text
+                                        switch (selected) {
+                                            case 'Dewey Decimal classification':
+                                            target = "lc:RT:bf2:DDC"
+                                            break
+                                            case 'National Library of Medicine classification':
+                                            target = "lc:RT:bf2:NLM"
+                                            break
+                                            case 'Other classification number':
+                                            target = "lc:RT:bf2:OtherClass"
+                                            break
+                                            default:
+                                            target = "lc:RT:bf2:LCC"
+                                        }
+                                        if (target == vRt) {
+                                            this.insertDefaultValuesComponent(structure['@guid'], template)
+
+                                        }
+                                    } else if (rt.includes(":Ibc:Work")) { // IBC only has 1 option
+                                        this.insertDefaultValuesComponent(structure['@guid'], template)
+                                    } else { // happening from pref, DOM isn't loaded yet
+                                        target = "lc:RT:bf2:LCC"
+                                        if (target == vRt) {
+                                            this.insertDefaultValuesComponent(structure['@guid'], template)
+                                            structure.userValue['http://id.loc.gov/ontologies/bibframe/classification'][0]['@type'] = "http://id.loc.gov/ontologies/bibframe/ClassificationLcc"
+                                        }
+                                    }
+
+                                } else if (structure.propertyURI == 'http://id.loc.gov/ontologies/bibframe/subject') {
+                                    let selection = document.getElementById(structure['@guid'] + '-select')
+                                    let selected
+                                    let target
+                                    if (selection) {
+                                        selected = selection.options[selection.selectedIndex].text
+                                        switch (selected) {
+                                            case 'CYAC subject':
+                                            target = "lc:RT:bf2:Topic:Childrens:Components"
+                                            break
+                                            case 'Geographic subjects':
+                                            target = "lc:RT:bf2:Topic:Place:Components"
+                                            break
+                                            default:
+                                            target = "lc:RT:bf2:Components"
+                                        }
+                                        if (target == vRt) {
+                                            this.insertDefaultValuesComponent(structure['@guid'], template)
+                                        }
+                                    } else { // loaded from pref, no DOM yet
+                                        target = "lc:RT:bf2:Components"
+                                        if (target == vRt) {
+                                            this.insertDefaultValuesComponent(structure['@guid'], template)
+                                        }
+                                    }
+                                } else if (vRt != 'lc:RT:bf2:SeriesHub') {
+                                    this.insertDefaultValuesComponent(structure['@guid'], template)
+                                } else if (template.id == 'id_loc_gov_ontologies_bibframe_relationship__relationship') {
+                                    let propertyPath = [
+                                    {'level': 0, 'propertyURI': 'http://id.loc.gov/ontologies/bibframe/relation'},
+                                    {'level': 1, 'propertyURI': 'http://id.loc.gov/ontologies/bibframe/relationship'},
+                                    ]
+                                    this.insertDefaultValuesComponent(structure['@guid'], template, propertyPath)
+                                }
+                                } else if (template.id == 'id_loc_gov_ontologies_bibframe_associatedResource__series_hub'){
+                                    // need to go deeper for input transcripbed series status
+                                    for (let vRt of template.valueConstraint.valueTemplateRefs) {
+                                        for (let temp of this.rtLookup[vRt].propertyTemplates) {
+                                        if (temp.id == 'id_loc_gov_ontologies_bibframe_status__status'){
+                                            let propertyPath = [
+                                            {'level': 0, 'propertyURI': 'http://id.loc.gov/ontologies/bibframe/relation'},
+                                            {'level': 1, 'propertyURI': 'http://id.loc.gov/ontologies/bibframe/associatedResource'},
+                                            {'level': 2, 'propertyURI': 'http://id.loc.gov/ontologies/bibframe/status'},
+                                            ]
+                                            this.insertDefaultValuesComponent(structure['@guid'], temp, propertyPath)
+                                        }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
     }, // end of methods
 })

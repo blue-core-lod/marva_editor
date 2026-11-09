@@ -5,7 +5,7 @@
     :click-to-close="true" :esc-to-close="true" @closed="closeEditor()" :background="'non-interactive'"
     :lock-scroll="true" class="complex-lookup-modal" content-class="complex-lookup-modal-content">
 
-    <div ref="complexLookupModalContainer" class="complex-lookup-modal-container">
+    <div ref="complexLookupModalContainer" class="complex-lookup-modal-container" @click="resetCursor" @mousemove="resetCursor">
       <div
         :style="`position: relative; ${this.preferenceStore.styleModalBackgroundColor()}; ${this.preferenceStore.styleModalTextColor()}`"
         class="subject-container-outer">
@@ -99,7 +99,7 @@
                     <button @click="searchModeSwitch('HUBS')" :data-tooltip="'Shortcut: CTRL+ALT+4'"
                       :class="['simptip-position-bottom', { 'active': (searchMode === 'HUBS') }]">Hubs</button>
                     <button @click="searchModeSwitch('ENTITIES')" :data-tooltip="'Shortcut: CTRL+ALT+5'"
-                      :class="['simptip-position-bottom', { 'active': (searchMode === 'ENTITIES') }]" v-if="configStore.returnUrls.env == 'staging'">Entities</button>
+                      :class="['simptip-position-bottom', { 'active': (searchMode === 'ENTITIES') }]" v-if="configStore.returnUrls.env == 'staging' && !configStore.returnUrls.displayAsProduction">Entities</button>
                     <!--
                     <button @click="searchModeSwitch('BCLUP_FAST')" :data-tooltip="'Shortcut: CTRL+ALT+6'"
                       :class="['simptip-position-bottom', { 'active': (searchMode === 'BCLUP_FAST') }]">FAST</button>
@@ -116,7 +116,7 @@
                 </div>
                 <div v-if="activeSearch !== false">{{ activeSearch }}</div>
                 <div v-if="searchResults !== null" class="subject-search-results">
-                  <ComplexSearchResultsDisplay :searchResults="searchResults" :pickLookup="pickLookup"
+                  <ComplexSearchResultsDisplay :searchResults="searchResults" :pickLookup="pickLookup" :currentSelection="pickPostion"
                     :searchMode="searchMode" :gettySearchType="gettySearchType" @loadContext="loadContext" @selectContext="selectContext"
                     @nafSearch="nafSearch" @lookupSearch="lookupSearch"/>
 
@@ -1595,23 +1595,28 @@ export default {
      */
     buildPickLookup: function () {
       for (let x in this.searchResults.subjectsComplex) {
-        this.pickLookup[x] = this.searchResults.subjectsComplex[x]
+        // this.pickLookup[x] = this.searchResults.subjectsComplex[x]
+        this.pickLookup[this.searchResults.subjectsSimple.length + this.searchResults.names.length + parseInt(x)] = this.searchResults.subjectsComplex[x]
       }
 
       for (let x in this.searchResults.subjectsChildrenComplex) {
-        this.pickLookup[x] = this.searchResults.subjectsChildrenComplex[x]
+        this.pickLookup[this.searchResults.subjectsChildren.length + this.searchResults.names.length + parseInt(x)] = this.searchResults.subjectsChildrenComplex[x]
       }
 
       for (let x in this.searchResults.subjectsSimple) {
-        this.pickLookup[parseInt(x) + parseInt(this.searchResults.subjectsComplex.length)] = this.searchResults.subjectsSimple[x]
+        this.pickLookup[x] = this.searchResults.subjectsSimple[x]
       }
 
       for (let x in this.searchResults.subjectsChildren) {
-        this.pickLookup[parseInt(x) + parseInt(this.searchResults.subjectsChildrenComplex.length)] = this.searchResults.subjectsChildren[x]
+        this.pickLookup[x] = this.searchResults.subjectsChildren[x]
       }
 
       for (let x in this.searchResults.names) {
-        this.pickLookup[(this.searchResults.names.length - x) * -1] = this.searchResults.names[x]
+        if (this.searchMode != "CHILD"){
+          this.pickLookup[( this.searchResults.subjectsSimple.length + parseInt(x))] = this.searchResults.names[x]
+        } else {
+          this.pickLookup[( this.searchResults.subjectsChildren.length + parseInt(x))] = this.searchResults.names[x]
+        }
       }
 
       for (let x in this.searchResults.exact) {
@@ -1774,7 +1779,8 @@ export default {
 
       that.pickLookup = {}
 
-      that.pickPostion = that.searchResults.subjectsSimple.length + that.searchResults.subjectsComplex.length - 1
+      // that.pickPostion = that.searchResults.subjectsSimple.length + that.searchResults.subjectsComplex.length - 1
+      that.pickPostion = 0
 
       that.buildPickLookup()
 
@@ -1807,6 +1813,10 @@ export default {
         that.contextRequestInProgress = true
         // that.contextData = await utilsNetwork.returnContext(that.pickLookup[that.pickPostion].uri)
         that.contextData = that.getContext()
+        if (that.contextData instanceof Promise){
+          that.contextData = that.pickLookup[that.pickPostion]
+        }
+        that.loadContext(0)
 
         // keep a local copy of it for looking up subject type
         if (that.contextData) {
@@ -1909,6 +1919,8 @@ export default {
     },
 
     getContext: async function () {
+      if (!this.pickLookup[this.pickPostion]){ return false }
+      // if (this.pickLookup[this.pickPostion] && this.pickLookup[this.pickPostion].literal) {
       if (this.pickLookup[this.pickPostion].literal) {
         this.contextData = this.pickLookup[this.pickPostion]
         return false
@@ -1956,12 +1968,16 @@ export default {
       this.contextData.variantLabels = [...new Set(this.contextData.variantLabels)]
 
       // filter related, so it doesn't duplicate value from earlier/later, broader
-      if (this.contextData['relateds']){
-        this.contextData['relateds'] = this.contextData['relateds'].filter(n => !this.contextData['hasEarlierEstablishedForms'].includes(n))
-        this.contextData['relateds'] = this.contextData['relateds'].filter(n => !this.contextData['hasLaterEstablishedForms'].includes(n))
-        this.contextData['relateds'] = this.contextData['relateds'].filter(n => !this.contextData['broaders'].includes(n))
-      } else {
-        this.contextData['relateds'] = []
+      try {
+        if (this.contextData['relateds']){
+          this.contextData['relateds'] = this.contextData['relateds'].filter(n => !this.contextData['hasEarlierEstablishedForms'].includes(n))
+          this.contextData['relateds'] = this.contextData['relateds'].filter(n => !this.contextData['hasLaterEstablishedForms'].includes(n))
+          this.contextData['relateds'] = this.contextData['relateds'].filter(n => !this.contextData['broaders'].includes(n))
+        } else {
+          this.contextData['relateds'] = []
+        }
+      } catch {
+        console.warn("Can't find relationship")
       }
 
       this.contextRequestInProgress = false
@@ -2122,10 +2138,6 @@ export default {
         this.pickPostion = pickPostion
       } else {
         return null
-      }
-
-      if (this.pickLookup[this.pickPostion].literal) {
-        return false
       }
 
       this.getContext()
@@ -2418,208 +2430,248 @@ export default {
 
     },
 
+    resetCursor: function(){
+      // For arrow navigation, we need to turn off the cursor or scrolling won't work turns it back on
+      let target = document.getElementsByClassName('selected')[0]
+      if (target){
+        let parent = target.parentElement.parentElement
+        parent.style.pointerEvents = 'auto'
+      }
+    },
 
     navInput: function (event) {
       if (event.key == 'ArrowUp') {
-        if (parseInt(this.pickPostion) <= this.searchResults.names.length * -1) {
-          return false
-        }
+        if (parseInt(this.pickPostion) <= 0) { return false }
 
         this.pickCurrent = null //allows keyboard selection
         this.loadContext(parseInt(this.pickPostion) - 1)
-        this.pickCurrent = parseInt(this.pickPostion)
+
+        let target = document.getElementsByClassName('selected')[0]
+        let parent = target.parentElement.parentElement
+        parent.style.pointerEvents = 'none'
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        })
+
         event.preventDefault()
         return false
       } else if (event.key == 'ArrowDown') {
-
-        if (parseInt(this.pickPostion) >= this.searchResults.subjectsSimple.length - 1 + this.searchResults.subjectsComplex.length) {
-          return false
+        if (this.searchMode == 'ENTITIES') {
+          if (parseInt(this.pickPostion) > (this.searchResults.entities.length) ) {
+            return false
+          }
+        } else if (this.searchMode == 'CHILD'){
+          if (parseInt(this.pickPostion) > (this.searchResults.subjectsChildren.length + this.searchResults.subjectsComplex.length + this.searchResults.names.length)-2) {
+            return false
+          }
+        // BLUECORE update start - bound arrow navigation for BCL-UP results
+        } else if (this.searchMode.startsWith('BCLUP_')) {
+          if (parseInt(this.pickPostion) >= this.searchResults.bclup.length - 1) {
+            return false
+          }
+        // BLUECORE update end
+        } else {
+          if (parseInt(this.pickPostion) > (this.searchResults.subjectsSimple.length + this.searchResults.subjectsComplex.length + this.searchResults.names.length)-2) {
+            return false
+          }
         }
+
+        let target = document.getElementsByClassName('selected')[0]
+        let parent = target.parentElement.parentElement
+        parent.style.pointerEvents = 'none'
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        })
+
 
         this.pickCurrent = null //allows keyboard selection
         this.loadContext(parseInt(this.pickPostion) + 1)
-        this.pickCurrent = parseInt(this.pickPostion)
         event.preventDefault()
         return false
-      } else if (event.key == 'Enter') {
-        if (event.shiftKey) {
-          if (!this.okayToAdd) {
-            alert('Something is missing. Make sure all elements in the heading are green.')
+      } else {
+        this.resetCursor()
+
+          if (event.key == 'Enter') {
+          if (event.shiftKey) {
+            if (!this.okayToAdd) {
+              alert('Something is missing. Make sure all elements in the heading are green.')
+              return
+            }
+            this.add()
             return
           }
-          this.add()
-          return
-        }
-        this.selectContext()
+          this.pickCurrent = parseInt(this.pickPostion)
+          this.selectContext()
 
-      } else if (event.ctrlKey && event.altKey && event.key == "1") {
-        this.searchModeSwitch("LCSHNAF")
-      } else if (event.ctrlKey && event.altKey && event.key == "2") {
-        this.searchModeSwitch("CHILD")
-      } else if (event.ctrlKey && event.altKey && event.key == "3") {
-        this.searchModeSwitch("GEO")
-      } else if (event.ctrlKey && event.altKey && event.key == "4") {
-        this.searchModeSwitch("HUBS")
-      } else if (event.ctrlKey && event.altKey && event.key == "5") {
-        this.searchModeSwitch("ENTITIES")
-      // BLUECORE update start
-      } else if (event.ctrlKey && event.altKey && event.key == "7") {
-        this.searchModeSwitch("BCLUP_GETTY")
-      } else if (event.ctrlKey && event.altKey && event.key == "8") {
-        this.searchModeSwitch("BCLUP_HOMOSAURUS")
-      // BLUECORE update end
-      } else if ((this.searchMode == 'GEO' || this.searchMode == 'ENTITIES') && event.key == "-") {
-        if (this.components.length > 0) {
-          let lastC = this.components[this.components.length - 1]
+        } else if (event.ctrlKey && event.altKey && event.key == "1") {
+          this.searchModeSwitch("LCSHNAF")
+        } else if (event.ctrlKey && event.altKey && event.key == "2") {
+          this.searchModeSwitch("CHILD")
+        } else if (event.ctrlKey && event.altKey && event.key == "3") {
+          this.searchModeSwitch("GEO")
+        } else if (event.ctrlKey && event.altKey && event.key == "4") {
+          this.searchModeSwitch("HUBS")
+        } else if (event.ctrlKey && event.altKey && event.key == "5") {
+          this.searchModeSwitch("ENTITIES")
+        // BLUECORE update start
+        } else if (event.ctrlKey && event.altKey && event.key == "7") {
+          this.searchModeSwitch("BCLUP_GETTY")
+        } else if (event.ctrlKey && event.altKey && event.key == "8") {
+          this.searchModeSwitch("BCLUP_HOMOSAURUS")
+        // BLUECORE update end
+        } else if ((this.searchMode == 'GEO' || this.searchMode == 'ENTITIES') && event.key == "-") {
+          if (this.components.length > 0) {
+            let lastC = this.components[this.components.length - 1]
 
-          // if the last component has a URI then it was just selected
-          // so we are not in the middle of a indirect heading, we are about to type it
-          // so let them put in normal --. Unless the last piece was geographic. Then they
-          // may have selected the first part from LCSH/LCNAF
-          if (lastC.uri && this.activeComponentIndex == this.components.length - 1 && lastC.type != 'madsrdf:Geographic') {
-            return true
-          }
-
-          // if the last string is a normal "-" then make this one normal too
-          if (this.subjectString.slice(-1) == '-') {
-            return true
-          }
-
-        }
-
-        let start = event.target.selectionStart
-        let end = event.target.selectionEnd
-        // console.log(this.subjectString.substring(0,start),'|',this.subjectString.substring(end,this.subjectString.length))
-
-        this.subjectString = this.subjectString.substring(0, start) + '‑' + this.subjectString.substring(end, this.subjectString.length)
-        this.subjectString = this.subjectString.trim()
-
-        this.$nextTick(() => {
-          // console.log(start,end)
-          if (end - start > 0) {
-            event.target.setSelectionRange(start + 1, start + 1)
-          } else {
-            event.target.setSelectionRange(start + 1, end + 1)
-          }
-
-        })
-
-        this.subjectStringChanged(event)
-
-        event.preventDefault()
-        return false
-
-      } else {
-        // they might be trying to insert a diacritic here
-
-        // This mode is they press Crtl+e to enter diacritic macro mode, so they did that on the last kedown and now we need to act on the next keystroke and interpret it as a macro code
-        if (this.nextInputIsVoyagerModeDiacritics) {
-          // they are pressing shift in about to press antoher macro shrotcut
-          if (event.key == 'Shift') {
-            return false
-          }
-
-          if (this.diacriticPacks.voyager[event.code]) {
-            let useMacro
-            for (let macro of this.diacriticPacks.voyager[event.code]) {
-              if (macro.shiftKey == event.shiftKey) {
-                useMacro = macro
-                break
-              }
+            // if the last component has a URI then it was just selected
+            // so we are not in the middle of a indirect heading, we are about to type it
+            // so let them put in normal --. Unless the last piece was geographic. Then they
+            // may have selected the first part from LCSH/LCNAF
+            if (lastC.uri && this.activeComponentIndex == this.components.length - 1 && lastC.type != 'madsrdf:Geographic') {
+              return true
             }
 
-            let inputV = event.target
-            let insertAt = event.target.value.length
-            if (event.target && event.target.selectionStart) {
-              insertAt = event.target.selectionStart
+            // if the last string is a normal "-" then make this one normal too
+            if (this.subjectString.slice(-1) == '-') {
+              return true
             }
 
-            if (!useMacro.combining) {
-              // it is not a combining unicode char so just insert it into the value
-              if (inputV.value) {
-                // inputV.value=inputV.value+useMacro.codeEscape
-                inputV.value = inputV.value.substring(0, insertAt) + useMacro.codeEscape + inputV.value.substring(insertAt);
-              } else {
-                inputV.value = useMacro.codeEscape
-              }
-              // this.searchValueLocal = inputV.value
+          }
 
+          let start = event.target.selectionStart
+          let end = event.target.selectionEnd
+          // console.log(this.subjectString.substring(0,start),'|',this.subjectString.substring(end,this.subjectString.length))
+
+          this.subjectString = this.subjectString.substring(0, start) + '‑' + this.subjectString.substring(end, this.subjectString.length)
+          this.subjectString = this.subjectString.trim()
+
+          this.$nextTick(() => {
+            // console.log(start,end)
+            if (end - start > 0) {
+              event.target.setSelectionRange(start + 1, start + 1)
             } else {
-              // inputV.value=inputV.value+useMacro.codeEscape
-              inputV.value = inputV.value.substring(0, insertAt) + useMacro.codeEscape + inputV.value.substring(insertAt);
-              // this.searchValueLocal = inputV.value
-
+              event.target.setSelectionRange(start + 1, end + 1)
             }
 
-            if (insertAt) {
-              this.$nextTick(() => {
-                inputV.setSelectionRange(insertAt + 1, insertAt + 1)
-                // this.searchValueLocal = inputV.value
+          })
 
-                this.$nextTick(() => {
-                  inputV.focus()
-                })
+          this.subjectStringChanged(event)
 
-              })
-            } else {
-              this.$nextTick(() => {
-                inputV.focus()
-              })
-            }
-
-            // manually change the v-model var and force a update
-            this.$nextTick(() => {
-              this.subjectString = inputV.value
-              this.subjectStringChanged()
-              this.navString({ key: 'ArrowRight' })
-            })
-
-
-          }
-          // turn off mode
-          this.nextInputIsVoyagerModeDiacritics = false
-          event.target.style.removeProperty('background-color')
           event.preventDefault()
           return false
-        }
-        // all macros use the ctrl key
-        if (event.ctrlKey == true) {
-          if (this.diacriticUse.length > 0) {
-            for (let macro of this.diacriticUseValues) {
-              if (event.code == macro.code && event.ctrlKey == macro.ctrlKey && event.altKey == macro.altKey && event.shiftKey == macro.shiftKey) {
-                // console.log("run this macro", macro)
-                event.preventDefault()
-                this.runMacroExpressMacro(event)
 
-                // manually change the v-model var and force a update
-                this.$nextTick(() => {
-                  this.subjectString = event.target.value
-                  this.subjectStringChanged()
-                  this.navString({ key: 'ArrowRight' })
-                })
-                //
+        } else {
+          // they might be trying to insert a diacritic here
 
-                return false
-
-              }
-            }
-          }
-
-          // they are entering into voyager diacritic mode
-          if (event.code == 'KeyE') {
-            if (!this.preferenceStore.returnValue('--b-diacritics-disable-voyager-mode')) {
-              event.target.style.backgroundColor = "chartreuse"
-              this.nextInputIsVoyagerModeDiacritics = true
-              event.preventDefault()
+          // This mode is they press Crtl+e to enter diacritic macro mode, so they did that on the last kedown and now we need to act on the next keystroke and interpret it as a macro code
+          if (this.nextInputIsVoyagerModeDiacritics) {
+            // they are pressing shift in about to press antoher macro shrotcut
+            if (event.key == 'Shift') {
               return false
             }
 
+            if (this.diacriticPacks.voyager[event.code]) {
+              let useMacro
+              for (let macro of this.diacriticPacks.voyager[event.code]) {
+                if (macro.shiftKey == event.shiftKey) {
+                  useMacro = macro
+                  break
+                }
+              }
+
+              let inputV = event.target
+              let insertAt = event.target.value.length
+              if (event.target && event.target.selectionStart) {
+                insertAt = event.target.selectionStart
+              }
+
+              if (!useMacro.combining) {
+                // it is not a combining unicode char so just insert it into the value
+                if (inputV.value) {
+                  // inputV.value=inputV.value+useMacro.codeEscape
+                  inputV.value = inputV.value.substring(0, insertAt) + useMacro.codeEscape + inputV.value.substring(insertAt);
+                } else {
+                  inputV.value = useMacro.codeEscape
+                }
+                // this.searchValueLocal = inputV.value
+
+              } else {
+                // inputV.value=inputV.value+useMacro.codeEscape
+                inputV.value = inputV.value.substring(0, insertAt) + useMacro.codeEscape + inputV.value.substring(insertAt);
+                // this.searchValueLocal = inputV.value
+
+              }
+
+              if (insertAt) {
+                this.$nextTick(() => {
+                  inputV.setSelectionRange(insertAt + 1, insertAt + 1)
+                  // this.searchValueLocal = inputV.value
+
+                  this.$nextTick(() => {
+                    inputV.focus()
+                  })
+
+                })
+              } else {
+                this.$nextTick(() => {
+                  inputV.focus()
+                })
+              }
+
+              // manually change the v-model var and force a update
+              this.$nextTick(() => {
+                this.subjectString = inputV.value
+                this.subjectStringChanged()
+                this.navString({ key: 'ArrowRight' })
+              })
+
+
+            }
+            // turn off mode
+            this.nextInputIsVoyagerModeDiacritics = false
+            event.target.style.removeProperty('background-color')
+            event.preventDefault()
+            return false
           }
-          //
+          // all macros use the ctrl key
+          if (event.ctrlKey == true) {
+            if (this.diacriticUse.length > 0) {
+              for (let macro of this.diacriticUseValues) {
+                if (event.code == macro.code && event.ctrlKey == macro.ctrlKey && event.altKey == macro.altKey && event.shiftKey == macro.shiftKey) {
+                  // console.log("run this macro", macro)
+                  event.preventDefault()
+                  this.runMacroExpressMacro(event)
+
+                  // manually change the v-model var and force a update
+                  this.$nextTick(() => {
+                    this.subjectString = event.target.value
+                    this.subjectStringChanged()
+                    this.navString({ key: 'ArrowRight' })
+                  })
+                  //
+
+                  return false
+
+                }
+              }
+            }
+
+            // they are entering into voyager diacritic mode
+            if (event.code == 'KeyE') {
+              if (!this.preferenceStore.returnValue('--b-diacritics-disable-voyager-mode')) {
+                event.target.style.backgroundColor = "chartreuse"
+                this.nextInputIsVoyagerModeDiacritics = true
+                event.preventDefault()
+                return false
+              }
+
+            }
+            //
+          }
         }
       }
-
-
 
     },
 
@@ -2753,7 +2805,6 @@ export default {
                 }
               }
               this.searchApis(c.label, searchString, this)
-
               // BUT if it ends with a number and - then it is a name with open life dates
               // so do look that one up
             } else if (/[0-9]{4}\??-/.test(c.label)) {
@@ -3305,3 +3356,4 @@ export default {
 };
 
 </script>
+

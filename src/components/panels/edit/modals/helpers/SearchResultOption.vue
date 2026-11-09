@@ -21,7 +21,7 @@
         <!-- BLUECORE update end -->
         <div v-for="(value, ix) in searchResults[searchType]" @click="$emit('selectContext', calculateIndex(ix))"
             @mouseover="setPickPosition(calculateIndex(ix))" :data-id="calculateIndex(ix)" :key="value.uri"
-            :class="['fake-option', {'not-usable': !checkIsUsable(value), 'unselected': (pickPostion != calculateIndex(ix)), 'selected': (pickPostion == calculateIndex(ix)), 'picked': (pickLookup[calculateIndex(ix)] && pickLookup[calculateIndex(ix)].picked) }]">
+            :class="['fake-option', {'not-usable': !checkIsUsable(value), 'unselected': (currSel != calculateIndex(ix)), 'selected': (currSel == calculateIndex(ix)), 'picked': (pickLookup[calculateIndex(ix)] && pickLookup[calculateIndex(ix)].picked) }]">
             <span class='label' v-if="value.suggestLabel && value.suggestLabel.length > 100">{{ value.suggestLabel.substring(0, 100)
             }}...</span>
             <span class='label' v-else-if="value.literal">
@@ -70,8 +70,9 @@ export default {
         index: String,
         searchResults: Object,
         pickLookup: Object,
-        // BLUECORE update start
         searchMode: String,
+        currSel: Number,
+        // BLUECORE update start
         gettySearchType: {
             type: String,
             default: 'aat',
@@ -147,8 +148,13 @@ export default {
         calculateIndex: function (i) {
             const searchResults = this.searchResults
             try {
-                let f = new Function('searchResults', "return " + this.index.replace('ix', i))
-                return f(searchResults)
+                if (this.searchMode == 'CHILD' && this.searchType == 'names'){
+                    let simpleResults = this.searchResults.subjectsChildren.length
+                    return simpleResults + i
+                } else {
+                    let f = new Function('searchResults', "return " + this.index.replace('ix', i))
+                    return f(searchResults)
+                }
             } catch (err) {
                 return i
             }
