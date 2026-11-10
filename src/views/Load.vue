@@ -370,6 +370,25 @@
                   </div>
                 </div>
 
+                <div v-if="workflowStore.enabled" class="load-workflows">
+                  <h2 style="margin-bottom: 10px;">
+                    <span style="font-size: 1.25em; vertical-align: bottom; margin-right: 3px;"
+                      class="material-icons">account_tree</span>
+                    <span>Workflows</span>
+                  </h2>
+                  <div style="padding:5px;">
+                    Work through many records at once in a spreadsheet, scanning or typing identifiers to add them.
+                  </div>
+                  <div class="load-buttons">
+                    <router-link :to="{ name: 'Workflows' }" custom v-slot="{ navigate }">
+                      <button class="load-button load-workflows-button" @click="navigate" title="Edit many records at once in a spreadsheet">
+                        <span class="material-icons">account_tree</span>
+                        <span>Open Workflows</span>
+                      </button>
+                    </router-link>
+                  </div>
+                </div>
+
                 <div v-if="showTestData" style="margin-top: 1em;">
                   <table id="test-data-table">
                     <tr class="test-data" v-for="t in testData">
@@ -401,6 +420,7 @@ import 'splitpanes/dist/splitpanes.css'
 import { usePreferenceStore } from '@/stores/preference'
 import { useConfigStore } from '@/stores/config'
 import { useProfileStore } from '@/stores/profile'
+import { useWorkflowStore } from '@/stores/workflow'
 
 import { mapStores, mapState, mapWritableState } from 'pinia'
 
@@ -477,6 +497,7 @@ export default {
     // gives access to this.counterStore and this.userStore
     ...mapStores(usePreferenceStore),
     ...mapStores(useProfileStore),
+    ...mapStores(useWorkflowStore),
     ...mapState(usePreferenceStore, ['styleDefault', 'panelDisplay']),
     ...mapState(useConfigStore, ['testData']),
     ...mapState(useProfileStore, ['startingPoints', 'profiles', 'copyCatMode']),
@@ -831,6 +852,17 @@ export default {
       this.loadUrl(profile)
     },
 
+    loadWithDefaults: function(structure){
+      // 2023416867
+      let loadDefaultsAll = this.preferenceStore.returnValue('--b-edit-load-defaults')
+      let loadDefaultsClass = this.preferenceStore.returnValue('--b-edit-load-defaults-classification')
+
+      if (loadDefaultsAll) { return 'all'}
+      if (loadDefaultsClass && structure.propertyLabel == 'Classification numbers' ){ return 'class' }
+
+      return false
+    },
+
     loadUrl: async function (useInstanceProfile, multiTestFlag) {
       console.log("useInstanceProfile", useInstanceProfile)
       let useLoadUrl = ''
@@ -846,7 +878,7 @@ export default {
       } else if (this.urlToLoad == 'new') {
         // continue on with a empty profile
         try {
-          marva001 = await utilsNetwork.getMarva001() // get the Marva001
+          marva001 = await utilsNetwork.getMarva001()
           this.profileStore.logEvent('001_REQUESTED', { metadata: [marva001] })
           loadEventType = 'CREATED_RECORD'
 
@@ -1008,6 +1040,37 @@ export default {
       if (useLoadUrl.trim() !== '') {
         let profileDataMerge = await utilsParse.transformRts(useProfile)
         this.activeProfile = profileDataMerge
+
+        for (let rt in this.activeProfile.rt) {
+          let pt = this.activeProfile.rt[rt].pt
+          for (let t of Object.keys(pt)){
+            let target = pt[t]
+
+            let structure = this.profileStore.returnStructureByComponentGuid(target['@guid'])
+            let withDefaults = this.loadWithDefaults(structure)
+            if (withDefaults){ // 2023416867
+              if (withDefaults == 'all') {
+                this.profileStore.addAllDefaults()
+              } else if (withDefaults == 'class'){
+                for (let vRt of structure.valueConstraint.valueTemplateRefs) {
+                  for (let template of this.profileStore.rtLookup[vRt].propertyTemplates) {
+                      if (template.valueConstraint.defaults && template.valueConstraint.defaults.length > 0) {
+                      // for classifiction, we want to make sure we're only working on the currently selected template
+                      if (structure.propertyURI == 'http://id.loc.gov/ontologies/bibframe/classification') {
+                        let target = "lc:RT:bf2:LCC"
+                        if (target == vRt) {
+                          this.profileStore.insertDefaultValuesComponent(structure['@guid'], template)
+                          // give type too
+                          structure.userValue['http://id.loc.gov/ontologies/bibframe/classification'][0]['@type'] = "http://id.loc.gov/ontologies/bibframe/ClassificationLcc"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       } else {
         // if there is not url they are making it from scratch, so we need to link the instances and work together
         useProfile = utilsParse.linkInstancesWorks(useProfile)
@@ -1227,52 +1290,6 @@ export default {
                 "valueTemplateRefs": [targetTemplate]
               }
             }
-
-            // Add the eNumber to the instance identifier
-            /*
-            if (Object.keys(pt).includes("id_loc_gov_ontologies_bibframe_identifiedBy__identifiers")) {
-              pt['id_loc_gov_ontologies_bibframe_identifiedBy__identifiers'].userValue = {
-                "http://id.loc.gov/ontologies/bibframe/identifiedBy": [
-                  {
-                    "@guid": short.generate(),
-                    "@type": "http://id.loc.gov/ontologies/bibframe/Local",
-                    "http://www.w3.org/1999/02/22-rdf-syntax-ns#value": [
-                      {
-                        "@guid": short.generate(),
-                        "http://www.w3.org/1999/02/22-rdf-syntax-ns#value": marva001
-                      }
-                    ],
-                    "http://id.loc.gov/ontologies/bibframe/assigner": [{
-                      "@guid": short.generate(),
-                      "@id": "http://id.loc.gov/vocabulary/organizations/dlcmrc",
-                      "@type": "http://id.loc.gov/ontologies/bibframe/Organization",
-                      "http://www.w3.org/2000/01/rdf-schema#label": [{
-                        "@guid": short.generate(),
-                        "http://www.w3.org/2000/01/rdf-schema#label": "LC, NDMSO"
-                      }],
-                      "http://id.loc.gov/ontologies/bibframe/code": [
-                        {
-                          "@guid": short.generate(),
-                          "http://id.loc.gov/ontologies/bibframe/code": "DLC-MRC",
-                          "@datatype": "http://id.loc.gov/datatypes/orgs/code"
-                        },
-                        {
-                          "@guid": short.generate(),
-                          "http://id.loc.gov/ontologies/bibframe/code": "dlcmrc",
-                          "@datatype": "http://id.loc.gov/datatypes/orgs/normalized"
-                        },
-                        {
-                          "@guid": short.generate(),
-                          "http://id.loc.gov/ontologies/bibframe/code": "US-dlcmrc",
-                          "@datatype": "http://id.loc.gov/datatypes/orgs/iso15511"
-                        }
-                      ]
-                    }]
-                  }
-                ]
-              }
-            }
-            */
 
             this.activeProfile.rt[rt].ptOrder.push('id_loc_gov_ontologies_bibframe_adminmetadata')
 
@@ -1802,6 +1819,21 @@ span.delete-icon.material-icons:hover{
 .load-button:hover {
   border: solid 1px var(--c-black);
   background-color: var(--c-white-soft);
+}
+
+.load-workflows {
+  margin-top: 3em;
+}
+
+.load-workflows-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.25em 0.75em;
+}
+
+.load-workflows-button .material-icons {
+  font-size: 1.1em;
 }
 
 .header {

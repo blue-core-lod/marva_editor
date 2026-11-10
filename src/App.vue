@@ -26,6 +26,7 @@ import AutoDeweyModal from "./components/panels/edit/modals/AutoDeweyModal.vue";
 import YoshinoSubjectsModal from "./components/panels/edit/modals/YoshinoSubjectsModal.vue";
 import MarvaScanModal from "./components/panels/edit/modals/MarvaScanModal.vue";
 import UpdateAvailableModal from "@/components/general/UpdateAvailableModal.vue";
+import MotdBanner from "@/components/general/MotdBanner.vue";
 
 
 
@@ -51,6 +52,7 @@ export default {
     ShelfListingModal,
     DiacriticsConfigModal,
     UpdateAvailableModal,
+    MotdBanner,
     AutoDeweyModal,
     YoshinoSubjectsModal,
     MarvaScanModal,
@@ -82,7 +84,7 @@ export default {
 
     ...mapState(usePreferenceStore, ['showPrefModal','catCode','ssoSessionExpired']),
     ...mapWritableState(usePreferenceStore, ['showLoginModal','showLoginModalSSO','showScriptshifterConfigModal','showDiacriticConfigModal','showTextMacroModal','showFieldColorsModal']),
-    ...mapWritableState(useConfigStore, ['showUpdateAvailableModal','showNonLatinBulkModal','showNonLatinAgentModal']),
+    ...mapWritableState(useConfigStore, ['showUpdateAvailableModal','showNonLatinBulkModal','showNonLatinAgentModal','motdHeight']),
 
 
     showLocalPreferenceModal: {
@@ -122,6 +124,7 @@ export default {
     }
 
     this.preferenceStore.initalize(this.configStore.returnUrls)
+    this.configStore.loadAnalyticsScript()
     // this.profileStore.buildProfiles()
     //window.setTimeout(async ()=>{
 
@@ -186,7 +189,11 @@ export default {
     <span>Your session has expired.</span>
     <button @click="preferenceStore.ssoLogin(configStore.returnUrls.util)">Log In</button>
   </div>
-  <RouterView />
+  <MotdBanner @height="motdHeight = $event" />
+  <!-- the view area shrinks by the MOTD banner height, the nav bar (teleported to body) moves down by the same via configStore.motdHeight -->
+  <div class="app-view" :style="{ height: motdHeight ? 'calc(100% - ' + motdHeight + 'px)' : '100%' }">
+    <RouterView />
+  </div>
   <LoadingModal/>
 
   <!-- Prevents it from complaining when loading and not displaying -->
@@ -266,6 +273,10 @@ export default {
 
 
 <style scoped>
+/* holds the routed view, below the MOTD banner when one is showing */
+.app-view {
+  height: 100%;
+}
 .sso-expired-banner {
   position: fixed;
   top: 0;

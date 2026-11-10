@@ -69,8 +69,8 @@
                         </div>
                         <div class="selected-value-container-title">
                           <!-- <span class="material-icons check-mark">check_circle_outline</span> -->
-                          <span v-if="!avl.needsDereference" style="padding-right: 0.3em; font-weight: bold">{{avl.label}}<span class="uncontrolled" v-if="avl.isLiteral">(uncontrolled)</span><span v-if="!avl.isLiteral" title="Controlled Term" class="selected-value-icon" style=""></span></span>
-                          <span v-else style="padding-right: 0.3em; font-weight: bold"><LabelDereference :URI="avl.URI"/><span v-if="!avl.isLiteral" title="Controlled Term" class="selected-value-icon"><span class="material-icons check-mark">check_circle_outline</span></span></span>
+                          <div v-if="!avl.needsDereference" style="padding-right: 0.3em; font-weight: bold"><a href="#" :class="['entity-link']" @click="openAuthority()" ref="el">{{avl.label}}</a><span title="Controlled Term" class="selected-value-icon" style=""><ValidationIcon :value="avl" /></span></div>
+                          <div v-else style="padding-right: 0.3em; font-weight: bold"><LabelDereference :URI="avl.URI"/><span v-if="!avl.isLiteral" title="Controlled Term" class="selected-value-icon"><ValidationIcon :value="avl" /></span></div>
                         </div>
                         <div class="selected-value-container-action">
                           <span @click="removeValue(idx)" style="border-left: solid 1px black; padding: 0 0.5em; font-size: 1em; cursor: pointer;">x</span>
@@ -386,8 +386,6 @@ export default {
 
 
   methods:{
-
-
 
     focusClick: function(){
       this.$refs.lookupInput.focus()
@@ -775,7 +773,8 @@ export default {
   padding-right: 10px;
   color:gray;
 }
-.bfcode-display-mode-holder-value{
+:deep() .bfcode-display-mode-holder-value{
+  display: flex;
   flex-grow: 1;
 }
 
@@ -839,6 +838,10 @@ export default {
   background-color: transparent;
 }
 
+.lookup-fake-input-text input::placeholder{
+  color: v-bind("preferenceStore.returnValue('--c-edit-main-placeholder-font-color')");
+}
+
 
 
 
@@ -846,7 +849,7 @@ export default {
 
   border: solid 1px;
   border-radius: 0.5em;
-  padding: 0.35em;
+  /* padding: 0.35em; */
   font-size: v-bind("preferenceStore.returnValue('--n-edit-main-lookup-font-size')");
   background-color: v-bind("preferenceStore.returnValue('--c-edit-main-lookup-background-color')");
   border: solid 1px v-bind("preferenceStore.returnValue('--c-edit-main-lookup-border-color')");
@@ -856,7 +859,7 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 2em;
+  height: fit-content;
 
 }
 .selected-value-container a{
@@ -875,7 +878,7 @@ export default {
   padding-right: 0.3em;
   margin-left: 5px;
   border-left: 1px solid black;
-  padding: 0px 7px;
+  padding: 0px 0px;
   font-size: 1em;
 }
 
@@ -933,5 +936,6 @@ export default {
 .simptip-position-top:after {
   left: 5% !important;
 }
+
 
 </style>

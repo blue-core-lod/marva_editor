@@ -112,7 +112,7 @@ export default {
 
     ...mapState(useProfileStore, ['profilesLoaded', 'activeProfile', 'rtLookup', 'activeProfileSaved', 'isEmptyComponent', 'returnComponentLibrary']),
     ...mapState(usePreferenceStore, ['styleDefault', 'showPrefModal', 'panelDisplay', 'customLayouts', 'createLayoutMode', 'panelSizePresets']),
-    ...mapState(useConfigStore, ['layouts']),
+    ...mapState(useConfigStore, ['layouts', 'motdHeight']),
     ...mapWritableState(usePreferenceStore, ['showLoginModal', 'showLoginModalSSO', 'showScriptshifterConfigModal', 'showDiacriticConfigModal', 'showTextMacroModal', 'layoutActiveFilter', 'layoutActive', 'showFieldColorsModal', 'customLayouts', 'createLayoutMode', 'showPanelSizeModal', 'showFindReplaceModal']),
     ...mapWritableState(useProfileStore, ['showPostModal', 'showShelfListingModal', 'activeShelfListData', 'showValidateModal', 'showRecoveryModal', 'showAutoDeweyModal', 'showYoshinoSubjectsModal', 'showItemInstanceSelection', 'showAdHocModal', 'emptyComponents', 'activeProfilePosted', 'activeProfilePostedTimestamp', 'copyCatMode', 'showUserDirectoryModal', 'showFolioSyncModal']),
     ...mapWritableState(useConfigStore, ['showNonLatinBulkModal', 'showNonLatinAgentModal']),
@@ -140,11 +140,15 @@ export default {
     },
 
     yoshinoAllowed() {
-      return this.preferenceStore.featureFlags.includes('subject-suggest')
+      return this.preferenceStore.featureAvailable('subjectFinder', this.preferenceStore.featureFlags.includes('subject-suggest'))
     },
 
     marvaScanAllowed() {
-      return this.preferenceStore.featureFlags.includes('marva-scan')
+      return this.preferenceStore.featureAvailable('marvaScan', this.preferenceStore.featureFlags.includes('marva-scan'))
+    },
+
+    linkedDataAllowed() {
+      return this.preferenceStore.featureAvailable('linkedData')
     },
 
     yoshinoHasSummary() {
@@ -323,21 +327,21 @@ export default {
                     text: "Title Case",
                     title: "Title Case",
                     icon: "titlecase",
-                    hotkey: "ctrl+alt+t",
+                    hotkey: "ctrl+shift+t",
                     click: () => { this.profileStore.getHighlightedText('title') }
                   },
                   {
                     text: "Lower Case",
                     title: "Lower Case",
                     icon: "lowercase",
-                    hotkey: "ctrl+alt+l",
+                    hotkey: "ctrl+shift+l",
                     click: () => { this.profileStore.getHighlightedText('lower') }
                   },
                   {
                     text: "Find & Replace",
                     title: "find Replace",
                     icon: "find_replace",
-                    hotkey: "ctrl+alt+h",
+                    hotkey: "ctrl+shift+h",
                     click: () => { this.showFindReplaceModal = true; }
                   }
                 // )
@@ -432,11 +436,11 @@ export default {
                 text: "Subject Finder", click: () => {
                   this.showYoshinoSubjectsModal = true
                 }, icon: "radar"
-              }] : [{
+              }] : (useConfigStore().returnUrls.isBibframeDotOrg ? [] : [{
                 text: "Req Subject Finder Access", click: () => {
                   window.open('https://forms.office.com/g/uQ36p66yN9', '_blank')
                 }, icon: "contact_support"
-              }]),
+              }])),
 
               ...(this.marvaScanAllowed ? [{
                 text: "Marva Scan", click: () => {
@@ -524,7 +528,7 @@ export default {
 
               { text: 'Preview XML', click: () => this.preferenceStore.togglePanel('xml'), icon: this.panelTitleXMLEdit, class: "nav-view-xml" },
               { text: 'Preview MARC', click: () => this.preferenceStore.togglePanel('marc'), icon: this.panelTitleMARCEdit },
-              { text: 'Linked Data', click: () => this.preferenceStore.togglePanel('linkedData'), icon: this.panelTitleLinkedData },
+              ...(this.linkedDataAllowed ? [{ text: 'Linked Data', click: () => this.preferenceStore.togglePanel('linkedData'), icon: this.panelTitleLinkedData }] : []),
 
 
 
@@ -580,6 +584,9 @@ export default {
           {
             text: "Preferences", menu: [
 
+              { text: 'Preferences', click: () => this.preferenceStore.togglePrefModal('General'), icon: 'settings' },
+              { is: 'separator' },
+
               { text: 'Scriptshifter', click: () => this.showScriptshifterConfigModal = true, icon: 'translate' },
               { text: 'Diacritic Macros', click: () => this.showDiacriticConfigModal = true, icon: 'keyboard' },
               { text: 'Text Macros', click: () => this.showTextMacroModal = true, icon: 'abc' },
@@ -601,26 +608,6 @@ export default {
 
 
 
-
-              { is: 'separator' },
-
-
-              { text: 'General', click: () => this.preferenceStore.togglePrefModal('General') },
-              { text: 'Edit Panel', click: () => this.preferenceStore.togglePrefModal('Edit Panel') },
-              { text: 'Literal Field', click: () => this.preferenceStore.togglePrefModal('Literal Field') },
-              { text: 'Lookup Field', click: () => this.preferenceStore.togglePrefModal('Lookup Field') },
-
-
-
-              { text: 'Modals', click: () => this.preferenceStore.togglePrefModal('Modals') },
-
-              { text: 'Complex Lookup', click: () => this.preferenceStore.togglePrefModal('Complex Lookup') },
-              { text: 'Action Button', click: () => this.preferenceStore.togglePrefModal('Action Button') },
-              { text: 'Nav Bar', click: () => this.preferenceStore.togglePrefModal('Nav Bar') },
-              { text: 'Sidebars - Previews', click: () => this.preferenceStore.togglePrefModal('Sidebars - Previews') },
-              { text: 'Sidebars - Property', click: () => this.preferenceStore.togglePrefModal('Sidebars - Property') },
-              { text: 'Shelflisting', click: () => this.preferenceStore.togglePrefModal('Shelflisting') },
-              // { text: 'CAMM Mode', click: () => this.preferenceStore.togglePrefModal('CAMM Mode')},
 
               { is: 'separator' },
               { text: 'Export Prefs', click: () => this.exportPreferences(), icon: 'download' },
@@ -939,7 +926,7 @@ export default {
       menu.push({ is: "spacer" })
 
 
-      if (config.returnUrls.dancerEnabled) {
+      if (config.returnUrls.dancerEnabled && !config.returnUrls.displayAsProduction) {
         let dancerMenuItems = []
         const currentWorkspace = window.localStorage.getItem('marva-dancerWorkspace')
 
@@ -1263,6 +1250,9 @@ export default {
     },
 
     isStaging: function () {
+      if (useConfigStore().returnUrls.displayAsProduction) {
+        return false
+      }
       if (useConfigStore().returnUrls.env == "staging" || useConfigStore().returnUrls.dev == true) {
         return true
       } else {
@@ -1463,7 +1453,7 @@ export default {
 
     savePrefsToDb: async function () {
       if (!useConfigStore().returnUrls.displayLCOnlyFeatures) { return }
-      let overwrite = confirm("This will overwrite your current preferences. Do you want to continue?")
+      let overwrite = confirm("This will update your preferences saved in the database. Do you want to continue?")
       if (!overwrite) { return }
 
       let user = this.userName
@@ -1611,98 +1601,8 @@ export default {
     },
 
     addAllDefaults: function () {
-      for (let rt in this.activeProfile.rt) {
-        for (let pt in this.activeProfile.rt[rt].pt) {
-          let component = this.activeProfile.rt[rt].pt[pt]
-          let structure = this.profileStore.returnStructureByComponentGuid(component['@guid'])
-          if (structure.propertyLabel != 'Admin Metadata' || structure.adminMetadataType == 'primary') {
-            if (component.valueConstraint.defaults.length > 0) {
-              // top level component
-              if (Object.keys(component.userValue).every(k => k.startsWith("@"))) { // it's empty
-                this.profileStore.insertDefaultValuesComponent(component['@guid'], structure)
-                continue
-              }
-            }
-            //go deeper
-            for (let vRt of component.valueConstraint.valueTemplateRefs) {
-              for (let template of this.profileStore.rtLookup[vRt].propertyTemplates) {
-                if (template.valueConstraint.defaults && template.valueConstraint.defaults.length > 0) {
-                  // for classifiction, we want to make sure we're only working on the currently selected template
-                  if (structure.propertyURI == 'http://id.loc.gov/ontologies/bibframe/classification') {
-                    let selection = document.getElementById(structure['@guid'] + '-select')
-                    let selected
-                    let target
-                    if (selection) {
-                      selected = selection.options[selection.selectedIndex].text
-                      switch (selected) {
-                        case 'Dewey Decimal classification':
-                          target = "lc:RT:bf2:DDC"
-                          break
-                        case 'National Library of Medicine classification':
-                          target = "lc:RT:bf2:NLM"
-                          break
-                        case 'Other classification number':
-                          target = "lc:RT:bf2:OtherClass"
-                          break
-                        default:
-                          target = "lc:RT:bf2:LCC"
-                      }
-                      if (target == vRt) {
-                        this.profileStore.insertDefaultValuesComponent(structure['@guid'], template)
-                      }
-                    } else if (rt.includes(":Ibc:Work")) { // IBC only has 1 option
-                      this.profileStore.insertDefaultValuesComponent(structure['@guid'], template)
-                    }
+      this.profileStore.addAllDefaults()
 
-                  } else if (structure.propertyURI == 'http://id.loc.gov/ontologies/bibframe/subject') {
-                    let selection = document.getElementById(structure['@guid'] + '-select')
-                    let selected
-                    let target
-                    if (selection) {
-                      selected = selection.options[selection.selectedIndex].text
-                      switch (selected) {
-                        case 'CYAC subject':
-                          target = "lc:RT:bf2:Topic:Childrens:Components"
-                          break
-                        case 'Geographic subjects':
-                          target = "lc:RT:bf2:Topic:Place:Components"
-                          break
-                        default:
-                          target = "lc:RT:bf2:Components"
-                      }
-                      if (target == vRt) {
-                        this.profileStore.insertDefaultValuesComponent(structure['@guid'], template)
-                      }
-                    }
-                  } else if (vRt != 'lc:RT:bf2:SeriesHub') {
-                    this.profileStore.insertDefaultValuesComponent(structure['@guid'], template)
-                  } else if (template.id == 'id_loc_gov_ontologies_bibframe_relationship__relationship') {
-                    let propertyPath = [
-                      {'level': 0, 'propertyURI': 'http://id.loc.gov/ontologies/bibframe/relation'},
-                      {'level': 1, 'propertyURI': 'http://id.loc.gov/ontologies/bibframe/relationship'},
-                    ]
-                    this.profileStore.insertDefaultValuesComponent(structure['@guid'], template, propertyPath)
-                  }
-                } else if (template.id == 'id_loc_gov_ontologies_bibframe_associatedResource__series_hub'){
-                  // need to go deeper for input transcripbed series status
-                  for (let vRt of template.valueConstraint.valueTemplateRefs) {
-                    for (let temp of this.profileStore.rtLookup[vRt].propertyTemplates) {
-                      if (temp.id == 'id_loc_gov_ontologies_bibframe_status__status'){
-                        let propertyPath = [
-                          {'level': 0, 'propertyURI': 'http://id.loc.gov/ontologies/bibframe/relation'},
-                          {'level': 1, 'propertyURI': 'http://id.loc.gov/ontologies/bibframe/associatedResource'},
-                          {'level': 2, 'propertyURI': 'http://id.loc.gov/ontologies/bibframe/status'},
-                        ]
-                        this.profileStore.insertDefaultValuesComponent(structure['@guid'], temp, propertyPath)
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
 
@@ -1896,7 +1796,8 @@ export default {
 <style scoped>
 #nav-holder {
   position: absolute;
-  top: 0;
+  /* sits below the message of the day banner when one is showing */
+  top: v-bind("motdHeight + 'px'");
   left: 0;
   width: 100vw;
   height: v-bind("preferenceStore.returnValue('--n-edit-main-splitpane-nav-height', true) - 1 + 'px'");

@@ -52,6 +52,8 @@
 
         activeComplexSearch: [],
         activeComplexSearchInProgress: false,
+        // set when the backend search service returns an HTTP error (4xx/5xx) so we can warn the user
+        activeComplexSearchError: null,
         controller: new AbortController(),
 
         initalSearchState: true,
@@ -650,7 +652,6 @@
         this.finalMarc = this.finalMarc.replace(/(?:\r\n|\r|\n)/g, '');
         this.finalMarc = this.finalMarc.replace(/> *</g, '><');
 
-        console.info("submitting: ", this.finalMarc)
         this.postStatus='posting'
         let cataloger = null
         let results = await this.postNacoStub(this.finalMarc, this.MARClccn, true)
@@ -1220,6 +1221,7 @@
       reset: function(){
         this.activeContext = null
         this.activeComplexSearch = []
+        this.activeComplexSearchError = null
         this.searchValueLocal = null
         this.authorityLookupLocal = null
         this.offsetStep = 30
@@ -1302,6 +1304,7 @@
         this.searchTimeout = window.setTimeout(async ()=>{
           this.activeComplexSearchInProgress = true
           this.activeComplexSearch = []
+          this.activeComplexSearchError = null
           this.activeComplexSearch = await utilsNetwork.searchComplex(searchPayload)
 
           // 2025-03 // there is currently an issue with ID suggest2/ that if you search with SOME diacritics it will fail
@@ -1312,6 +1315,14 @@
             // modify the payload to include the flag in the url
             searchPayload.url[0] = searchPayload.url[0] + '&keepdiacritics=true'
             this.activeComplexSearch = await utilsNetwork.searchComplex(searchPayload)
+          }
+
+          // if the backend returned an error (400/500 etc.) let the user know the search is failing
+          // rather than silently only offering the literal value
+          if (searchPayload.errors && searchPayload.errors.length > 0){
+            let codes = [...new Set(searchPayload.errors.map((e)=> e.status ? 'HTTP ' + e.status : 'network error'))]
+            this.activeComplexSearchError = codes.join(', ')
+            console.error("Complex lookup search failed:", searchPayload.errors)
           }
 
           this.activeComplexSearchInProgress = false
@@ -1754,6 +1765,7 @@
       },
 
       isStaging(){
+        if (useConfigStore().returnUrls.displayAsProduction){ return false }
         if (useConfigStore().returnUrls.env == "staging" || useConfigStore().returnUrls.dev == true){
           return true
         }else{
@@ -2117,6 +2129,10 @@
                 <button @click="loadNacoStubModal" style="float: right;" v-if="displayProvisonalNAR() == true">Create NAR</button>
 
                 <hr style="margin-top: 5px;">
+                <div v-if="activeComplexSearchError" class="complex-lookup-search-error" role="alert">
+                  <span class="material-icons" style="font-size: 1.1em; vertical-align: text-bottom;">warning</span>
+                  Search is failing: the lookup service returned an error ({{ activeComplexSearchError }}). Results below are incomplete, only the literal value is available. Please try again later.
+                </div>
                 <div>
                     <select size="100" ref="selectOptions" class="modal-entity-select" @change="selectChange($event)"  @keydown="selectNav($event)" :style="`${this.preferenceStore.styleModalBackgroundColor()}; ${this.preferenceStore.styleModalTextColor()}`">
                       <option v-if="activeComplexSearch.length == 0 && activeComplexSearchInProgress == false && initalSearchState != true">
@@ -2601,6 +2617,15 @@
 </style>
 
 <style scoped>
+.complex-lookup-search-error{
+  background-color: #ffe0e0;
+  color: #8a1f1f;
+  border: 1px solid #d33;
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  font-weight: bold;
+}
 
   .complex-lookup-modal-display-buttons{
     align-items: center;
