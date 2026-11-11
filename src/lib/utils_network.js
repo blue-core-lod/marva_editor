@@ -1,7 +1,10 @@
 import {useConfigStore} from "../stores/config";
 import {usePreferenceStore} from "../stores/preference";
-import {applyBluecoreLookupRequest, addBluecoreHeaders} from "@/bluecore/utils";
+// ### Bluecore Start ###
+import {applyBluecoreLookupRequest, addBluecoreHeaders} from "@/bluecore/utils"; // Bluecore Plugins
 import {isLocalScratchpad, saveRecordLocal, loadRecordLocal, searchSavedRecordsLocal} from "@/bluecore/scratchpad"; // Bluecore Plugins
+import {isBluecoreSearch, searchInstancesBluecore, bluecoreLastSystemDate} from "@/bluecore/search"; // Bluecore Plugins
+// ### Bluecore End ###
 
 import short from 'short-uuid'
 const translator = short();
@@ -3488,6 +3491,7 @@ const utilsNetwork = {
     * @return {array} - An array of {@link lccnSearchResult} results
     */
     searchInstanceByLCCN: async function(lccn){
+      if (isBluecoreSearch(useConfigStore().returnUrls)) return searchInstancesBluecore(useConfigStore().returnUrls.bluecoreSearch, lccn) // ### Bluecore search the Blue Core API instead of LC (see src/bluecore/search.js)
       lccn = lccn.replaceAll(' ','')
 
       // ID needs the lccn to have a space between letters and the numbers
@@ -4269,6 +4273,7 @@ const utilsNetwork = {
 
 
     fetchLastSystemDate: async function(url) {
+      if (bluecoreLastSystemDate(url)) return bluecoreLastSystemDate(url) // ### Bluecore => last-edited date of a Blue Core search result (see src/bluecore/search.js)
 
       let basePath = url.split('id.loc.gov/')[1];
 

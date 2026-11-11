@@ -106,8 +106,12 @@
                   <div v-if="loadingRecord" class="loading-record">L<span class="infinite-spin">O</span>ADING REC<span
                       class="infinite-spin">O</span>RD...</div>
 
-                  <p>Need to search title or author? Use <a href="https://preprod-8230.id.loc.gov/lds/index.xqy"
+                  <!-- ### Bluecore Start ### -->
+                  <p v-if="bluecoreSearchPage">Need to search title or author? Use <a :href="bluecoreSearchPage" target="_blank">Blue Core Search</a>.</p>
+                  <p v-else>Need to search title or author? Use <a href="https://preprod-8230.id.loc.gov/lds/index.xqy"
                       target="_blank">BFDB</a>.</p>
+                  <!-- ### Bluecore End ### -->
+
                 </form>
 
                 <ol>
@@ -160,9 +164,11 @@
                               :for="'lccnsearch' + idx">{{ r.label }}</label>
                             <span v-else>{{ r.label }}</span>
                           </td>
-                          <td><a :href="r.bfdbURL" style="padding-right: 10px;" target="_blank">BFDB</a></td>
+
+                          <!-- ### Bluecore Start ### -->
+                          <td><a :href="r.bfdbURL" style="padding-right: 10px;" target="_blank">{{ r.linkLabel || 'BFDB' }}</a></td>
                           <td>
-                            <span data-tooltip="When record was loaded/edited in BFDB" class="simptip-position-left"
+                            <span :data-tooltip="r.dateTooltip || 'When record was loaded/edited in BFDB'" class="simptip-position-left"
                               v-if="recordLastSystemDate[r.idURL]">{{ recordLastSystemDate[r.idURL] }}</span>
                             <span v-else>
                               <ul class="dots-loading">
@@ -170,10 +176,10 @@
                                 <li class="dot two"></li>
                                 <li class="dot three"></li>
                               </ul>
-
-
                             </span>
                           </td>
+                          <!-- ### Bluecore End ### -->
+
                           <td>
                             <span data-tooltip="Show LCAP Resync Buttons" class="simptip-position-left">
 
@@ -500,6 +506,7 @@ export default {
     ...mapStores(useWorkflowStore),
     ...mapState(usePreferenceStore, ['styleDefault', 'panelDisplay']),
     ...mapState(useConfigStore, ['testData']),
+    bluecoreSearchPage: () => useConfigStore().returnUrls.bluecoreSearchPage, // ### Blue Core Search link for the hint above the results
     ...mapState(useProfileStore, ['startingPoints', 'profiles', 'copyCatMode']),
     ...mapWritableState(useProfileStore, ['activeProfile', 'emptyComponents', 'activeProfilePosted', 'activeProfilePostedTimestamp', 'copyCatMode', 'showShelfListingModal', 'copyCatSearch']),
 
