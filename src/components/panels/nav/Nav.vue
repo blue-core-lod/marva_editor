@@ -69,6 +69,7 @@ import StatusIndicator from './nav_components/StatusIndicator.vue'
 import RecordHistory from './nav_components/RecordHistory.vue'
 import SystemStatus from './nav_components/SystemStatus.vue'
 import { bluecoreExportMenuItem } from '@/bluecore/export' // BLUECORE
+import { selectedDancerWorkspaceId, dancerEditorMenuItems } from '@/bluecore/dancer' // BLUECORE
 
 
 import TimeAgo from 'javascript-time-ago'
@@ -928,7 +929,7 @@ export default {
 
       if (config.returnUrls.dancerEnabled && !config.returnUrls.displayAsProduction) {
         let dancerMenuItems = []
-        const currentWorkspace = window.localStorage.getItem('marva-dancerWorkspace')
+        const currentWorkspace = selectedDancerWorkspaceId(this.dancerWorkspaces, config.returnUrls) // BLUECORE: was localStorage.getItem('marva-dancerWorkspace')
 
         for (let workspace of this.dancerWorkspaces) {
           dancerMenuItems.push({
@@ -948,6 +949,7 @@ export default {
           })
         }
 
+        dancerMenuItems.push(...dancerEditorMenuItems(config.returnUrls)) // BLUECORE: "Edit Templates (DCTap Dancer)" link
         // Add Legacy Profiles option at the bottom
         // We dont add the legacy profiles anymore after a period of transition
         // if (!config.returnUrls.isBibframeDotOrg) {
