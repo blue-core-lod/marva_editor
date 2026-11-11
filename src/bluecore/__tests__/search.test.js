@@ -89,7 +89,6 @@ describe('searchInstancesBluecore', () => {
 
     const apiUrl = `${window.location.origin}/api/instances/${UUID}`
     expect(results).toEqual([{
-      lccn: '2023540784',
       label: 'HBR guide : for managers',
       bfdbURL: URI,
       linkLabel: 'BF Instance',

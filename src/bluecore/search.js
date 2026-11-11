@@ -135,7 +135,6 @@ export async function searchInstancesBluecore(searchUrl, query) {
       const apiUrl = r.uuid ? new URL(`${bluecoreApiBase}/instances/${r.uuid}`, window.location.origin).href : r.uri
       if (r.updated_at) lastUpdated[apiUrl] = asUtc(r.updated_at)
       return {
-        lccn: query,
         label: bluecoreInstanceTitle(r),
         bfdbURL: r.uri, // the instance's own page (HTML for browsers)
         linkLabel: 'BF Instance',
