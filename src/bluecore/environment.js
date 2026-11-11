@@ -16,6 +16,8 @@ export const dev = {
   scriptshifter: 'https://bibframe.org/scriptshifter/',
   publish: `${apiBase}batches/upload/`, // Bluecore API Endpoint
   exportToCatalog: `${apiBase}export/`, // Bluecore API Endpoint (Export to Catalog)
+  bluecoreSearch: `${apiBase}search/`, // Bluecore API Endpoint (Load page instance search)
+  bluecoreSearchPage: `${apiBase}search`, // Bluecore Search page (Load page title/author search link)
   validate: 'http://localhost:9401/marva/util/validate/prod',
   profiles: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-profiles.json',
   starting: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-starting.json',
@@ -40,6 +42,8 @@ export const stg = {
   scriptshifter: 'https://bibframe.org/scriptshifter/',
   publish: `${apiBase}batches/upload/`, // Bluecore API Endpoint
   exportToCatalog: `${apiBase}export/`, // Bluecore API Endpoint (Export to Catalog)
+  bluecoreSearch: `${apiBase}search/`, // Bluecore API Endpoint (Load page instance search)
+  bluecoreSearchPage: `${apiBase}search`, // Bluecore Search page (Load page title/author search link)
   validate: 'http://localhost:9401/marva/util/validate/prod',
   profiles: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-profiles.json',
   starting: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-starting.json',
@@ -64,6 +68,8 @@ export const prod = {
   scriptshifter: 'https://bibframe.org/scriptshifter/',
   publish: `${apiBase}batches/upload/`, // Bluecore API Endpoint
   exportToCatalog: `${apiBase}export/`, // Bluecore API Endpoint (Export to Catalog)
+  bluecoreSearch: `${apiBase}search/`, // Bluecore API Endpoint (Load page instance search)
+  bluecoreSearchPage: `${apiBase}search`, // Bluecore Search page (Load page title/author search link)
   validate: 'http://localhost:9401/marva/util/validate/prod',
   profiles: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-profiles.json',
   starting: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-starting.json',
