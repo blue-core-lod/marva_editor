@@ -5,6 +5,7 @@ import {
   selectedDancerWorkspaceId,
   dancerEditorMenuItems,
   DANCER_WORKSPACE_KEY,
+  DANCER_WORKSPACE_NAME_KEY,
 } from '../dancer'
 import bluecore from '../environment'
 
@@ -53,6 +54,15 @@ describe('pickDancerWorkspace', () => {
     expect(pickDancerWorkspace(workspaces, 'ws-deleted', 'Blue Core')).toEqual(workspaces[1])
   })
 
+  it('finds a workspace by its saved name when its ID changed (e.g. "LC Latest" re-synced)', () => {
+    const resynced = [...workspaces, { id: 'ws-lc-new', name: 'LC Latest' }]
+    expect(pickDancerWorkspace(resynced, 'ws-lc-old', 'Blue Core', 'LC Latest')).toEqual(resynced[2])
+  })
+
+  it('prefers the saved ID over the saved name', () => {
+    expect(pickDancerWorkspace(workspaces, 'ws-cornell', 'Blue Core', 'Blue Core')).toEqual(workspaces[0])
+  })
+
   it('returns null without a matching default or a list', () => {
     expect(pickDancerWorkspace(workspaces, null, 'marva-default')).toBeNull()
     expect(pickDancerWorkspace(null, 'ws-cornell', 'Blue Core')).toBeNull()
@@ -67,11 +77,19 @@ describe('syncDancerWorkspace', () => {
     expect(storage.data[DANCER_WORKSPACE_KEY]).toBe('ws-bluecore')
   })
 
-  it('keeps a valid selection', async () => {
+  it('keeps a valid selection and remembers its name', async () => {
     mockFetch({ success: true, data: workspaces })
     const storage = memoryStorage({ [DANCER_WORKSPACE_KEY]: 'ws-cornell' })
     await syncDancerWorkspace(bluecoreUrls, storage)
     expect(storage.data[DANCER_WORKSPACE_KEY]).toBe('ws-cornell')
+    expect(storage.data[DANCER_WORKSPACE_NAME_KEY]).toBe('Cornell')
+  })
+
+  it('follows a workspace to its new ID by name', async () => {
+    mockFetch({ success: true, data: [...workspaces, { id: 'ws-lc-new', name: 'LC Latest' }] })
+    const storage = memoryStorage({ [DANCER_WORKSPACE_KEY]: 'ws-lc-old', [DANCER_WORKSPACE_NAME_KEY]: 'LC Latest' })
+    await syncDancerWorkspace(bluecoreUrls, storage)
+    expect(storage.data[DANCER_WORKSPACE_KEY]).toBe('ws-lc-new')
   })
 
   it('clears the selection when no workspace matches, so LC code uses static profiles', async () => {
@@ -110,6 +128,12 @@ describe('selectedDancerWorkspaceId', () => {
   it('marks the default when the stored workspace is gone', () => {
     const storage = memoryStorage({ [DANCER_WORKSPACE_KEY]: 'ws-deleted' })
     expect(selectedDancerWorkspaceId(workspaces, bluecoreUrls, storage)).toBe('ws-bluecore')
+  })
+
+  it('marks a workspace found by its saved name', () => {
+    const resynced = [...workspaces, { id: 'ws-lc-new', name: 'LC Latest' }]
+    const storage = memoryStorage({ [DANCER_WORKSPACE_KEY]: 'ws-lc-old', [DANCER_WORKSPACE_NAME_KEY]: 'LC Latest' })
+    expect(selectedDancerWorkspaceId(resynced, bluecoreUrls, storage)).toBe('ws-lc-new')
   })
 
   it('returns the stored ID unchanged without a default workspace', () => {

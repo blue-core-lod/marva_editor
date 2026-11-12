@@ -12,22 +12,28 @@
 
 // localStorage key LC's code reads for the selected workspace
 export const DANCER_WORKSPACE_KEY = 'marva-dancerWorkspace'
+// Blue Core: the selected workspace's name, to find it again if its ID changes
+export const DANCER_WORKSPACE_NAME_KEY = 'bluecore-dancerWorkspaceName'
 
 /**
- * The workspace saved in localStorage when it still exists in the dancer,
- * otherwise the default workspace (matched by name), otherwise null.
- * A saved ID can go stale when the dancer's data is reset, so it is never
- * trusted without checking it against the current workspace list.
+ * The workspace saved in localStorage when it still exists in the dancer
+ * (by ID, then by name), otherwise the default workspace (by name), otherwise
+ * null. A saved ID can go stale when the dancer's data is reset, or when the
+ * dancer re-imports a synced workspace such as "LC Latest" (new ID, same
+ * name), so it is never trusted without checking the current workspace list.
  *
  * @param {Array<{id: string, name: string}>} workspaces - from api/serve/workspaces
  * @param {string|null} storedId - localStorage marva-dancerWorkspace
  * @param {string} defaultName - e.g. 'Blue Core'
+ * @param {string|null} storedName - localStorage bluecore-dancerWorkspaceName
  * @return {{id: string, name: string}|null}
  */
-export function pickDancerWorkspace(workspaces, storedId, defaultName) {
+export function pickDancerWorkspace(workspaces, storedId, defaultName, storedName) {
   if (!Array.isArray(workspaces)) return null
-  const stored = storedId && storedId !== 'null' && workspaces.find(ws => ws.id === storedId)
-  if (stored) return stored
+  const byId = storedId && storedId !== 'null' && workspaces.find(ws => ws.id === storedId)
+  if (byId) return byId
+  const byName = storedName && workspaces.find(ws => ws.name === storedName)
+  if (byName) return byName
   return (defaultName && workspaces.find(ws => ws.name === defaultName)) || null
 }
 
@@ -52,10 +58,12 @@ export async function syncDancerWorkspace(returnUrls, storage) {
     console.error('Error fetching dancer workspace list:', err)
   }
 
-  const workspace = pickDancerWorkspace(workspaces, storage.getItem(DANCER_WORKSPACE_KEY), returnUrls.dancerDefaultWorkspace)
+  const workspace = pickDancerWorkspace(workspaces, storage.getItem(DANCER_WORKSPACE_KEY), returnUrls.dancerDefaultWorkspace, storage.getItem(DANCER_WORKSPACE_NAME_KEY))
   if (workspace) {
     storage.setItem(DANCER_WORKSPACE_KEY, workspace.id)
+    storage.setItem(DANCER_WORKSPACE_NAME_KEY, workspace.name)
   } else {
+    // Keep the name: the dancer may only be down for now
     storage.removeItem(DANCER_WORKSPACE_KEY)
   }
 }
@@ -66,9 +74,10 @@ export async function syncDancerWorkspace(returnUrls, storage) {
  * even if the menu renders before the sync finishes.
  */
 export function selectedDancerWorkspaceId(workspaces, returnUrls, storage) {
-  const storedId = (storage || window.localStorage).getItem(DANCER_WORKSPACE_KEY)
+  storage = storage || window.localStorage
+  const storedId = storage.getItem(DANCER_WORKSPACE_KEY)
   if (!returnUrls.dancerDefaultWorkspace) return storedId
-  return pickDancerWorkspace(workspaces, storedId, returnUrls.dancerDefaultWorkspace)?.id
+  return pickDancerWorkspace(workspaces, storedId, returnUrls.dancerDefaultWorkspace, storage.getItem(DANCER_WORKSPACE_NAME_KEY))?.id
 }
 
 /** Hook for Nav.vue: menu items that open the DCTap Dancer editor in a new tab */
