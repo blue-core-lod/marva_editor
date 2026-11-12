@@ -6,23 +6,18 @@ import {
   dancerEditorMenuItems,
   DANCER_WORKSPACE_KEY,
 } from '../dancer'
+import bluecore from '../environment'
 
 const workspaces = [
   { id: 'ws-cornell', name: 'Cornell' },
   { id: 'ws-bluecore', name: 'Blue Core' },
 ]
 
-const bluecoreUrls = {
-  dancerEnabled: true,
-  dancerWorkspaceList: '/marva/dancer/api/serve/workspaces',
-  dancerDefaultWorkspace: 'Blue Core',
-}
+// The real Blue Core config, so the tests break if environment.js drifts
+const bluecoreUrls = bluecore.prod
 
-// LC's configs enable the dancer but set no default workspace
-const lcUrls = {
-  dancerEnabled: true,
-  dancerWorkspaceList: 'https://editor.id.loc.gov/marva/dancer/api/serve/workspaces',
-}
+// The hooks are no-ops until a default workspace is configured
+const { dancerDefaultWorkspace, ...noDefaultUrls } = bluecoreUrls
 
 function memoryStorage(initial = {}) {
   const data = { ...initial }
@@ -94,12 +89,20 @@ describe('syncDancerWorkspace', () => {
     expect(storage.data[DANCER_WORKSPACE_KEY]).toBeUndefined()
   })
 
-  it('does nothing for LC configs', async () => {
+  it('does nothing without a default workspace', async () => {
     globalThis.fetch = vi.fn()
-    const storage = memoryStorage({ [DANCER_WORKSPACE_KEY]: 'ws-lc' })
-    await syncDancerWorkspace(lcUrls, storage)
+    const storage = memoryStorage({ [DANCER_WORKSPACE_KEY]: 'ws-cornell' })
+    await syncDancerWorkspace(noDefaultUrls, storage)
     expect(globalThis.fetch).not.toHaveBeenCalled()
-    expect(storage.data[DANCER_WORKSPACE_KEY]).toBe('ws-lc')
+    expect(storage.data[DANCER_WORKSPACE_KEY]).toBe('ws-cornell')
+  })
+
+  it('does nothing when the dancer is disabled', async () => {
+    globalThis.fetch = vi.fn()
+    const storage = memoryStorage({ [DANCER_WORKSPACE_KEY]: 'ws-cornell' })
+    await syncDancerWorkspace({ ...bluecoreUrls, dancerEnabled: false }, storage)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(storage.data[DANCER_WORKSPACE_KEY]).toBe('ws-cornell')
   })
 })
 
@@ -109,9 +112,9 @@ describe('selectedDancerWorkspaceId', () => {
     expect(selectedDancerWorkspaceId(workspaces, bluecoreUrls, storage)).toBe('ws-bluecore')
   })
 
-  it('returns the stored ID unchanged for LC configs', () => {
-    const storage = memoryStorage({ [DANCER_WORKSPACE_KEY]: 'ws-lc' })
-    expect(selectedDancerWorkspaceId(workspaces, lcUrls, storage)).toBe('ws-lc')
+  it('returns the stored ID unchanged without a default workspace', () => {
+    const storage = memoryStorage({ [DANCER_WORKSPACE_KEY]: 'ws-deleted' })
+    expect(selectedDancerWorkspaceId(workspaces, noDefaultUrls, storage)).toBe('ws-deleted')
   })
 })
 
@@ -126,7 +129,7 @@ describe('dancerEditorMenuItems', () => {
     expect(open).toHaveBeenCalledWith('/marva/dancer/', '_blank')
   })
 
-  it('adds nothing for LC configs', () => {
-    expect(dancerEditorMenuItems(lcUrls)).toEqual([])
+  it('adds nothing without a default workspace', () => {
+    expect(dancerEditorMenuItems(noDefaultUrls)).toEqual([])
   })
 })
