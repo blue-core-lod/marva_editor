@@ -34,6 +34,10 @@ export const dev = {
   folioMLCEndpoint: 'http://localhost:9401/marva/util/folio/next-mlc/staging',
   dancerEnabled: true,
   dancerWorkspaceList: "http://localhost:9401/marva/dancer/api/serve/workspaces",
+  // Features that are hidden / disabled unless the user is a demo user (see demoFeatureUsers)
+  // if the user's name (catInitals => aidemo)
+  restrictedFeatures: ['marvaScan', 'subjectFinder', 'linkedData'],
+  demoFeatureUsers: ['aidemo'],
 }
 
 export const stg = {
@@ -60,6 +64,10 @@ export const stg = {
   folioMLCEndpoint: 'http://localhost:9401/marva/util/folio/next-mlc/staging',
   dancerEnabled: true,
   dancerWorkspaceList: "http://localhost:9401/marva/dancer/api/serve/workspaces",
+  // Features that are hidden / disabled unless the user is a demo user (see demoFeatureUsers)
+  // if the user's name (catInitals => aidemo)
+  restrictedFeatures: ['marvaScan', 'subjectFinder', 'linkedData'],
+  demoFeatureUsers: ['aidemo'],
 }
 
 export const prod = {
@@ -86,7 +94,10 @@ export const prod = {
   folioMLCEndpoint: 'http://localhost:9401/marva/util/folio/next-mlc/staging',
   dancerEnabled: true,
   dancerWorkspaceList: "http://localhost:9401/marva/dancer/api/serve/workspaces",
-
+  // Features that are hidden / disabled unless the user is a demo user (see demoFeatureUsers)
+  // if the user's name (catInitals => aidemo)
+  restrictedFeatures: ['marvaScan', 'subjectFinder', 'linkedData'],
+  demoFeatureUsers: ['aidemo'],
 }
 
 export const bluecore = { dev, stg, prod }
