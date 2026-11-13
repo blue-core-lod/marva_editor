@@ -39,6 +39,10 @@ export const dev = {
   dancerEnabled: true,
   dancerWorkspaceList, // DCTap Dancer workspace list
   dancerDefaultWorkspace, // loaded when no (valid) workspace is selected
+  // Features that are hidden / disabled unless the user is a demo user (see demoFeatureUsers)
+  // if the user's name (catInitals => aidemo)
+  restrictedFeatures: ['marvaScan', 'subjectFinder', 'linkedData'],
+  demoFeatureUsers: ['aidemo'],
 }
 
 export const stg = {
@@ -66,6 +70,10 @@ export const stg = {
   dancerEnabled: true,
   dancerWorkspaceList, // DCTap Dancer workspace list
   dancerDefaultWorkspace, // loaded when no (valid) workspace is selected
+  // Features that are hidden / disabled unless the user is a demo user (see demoFeatureUsers)
+  // if the user's name (catInitals => aidemo)
+  restrictedFeatures: ['marvaScan', 'subjectFinder', 'linkedData'],
+  demoFeatureUsers: ['aidemo'],
 }
 
 export const prod = {
@@ -93,7 +101,10 @@ export const prod = {
   dancerEnabled: true,
   dancerWorkspaceList, // DCTap Dancer workspace list
   dancerDefaultWorkspace, // loaded when no (valid) workspace is selected
-
+  // Features that are hidden / disabled unless the user is a demo user (see demoFeatureUsers)
+  // if the user's name (catInitals => aidemo)
+  restrictedFeatures: ['marvaScan', 'subjectFinder', 'linkedData'],
+  demoFeatureUsers: ['aidemo'],
 }
 
 export const bluecore = { dev, stg, prod }
