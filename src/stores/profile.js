@@ -16,6 +16,7 @@ import { parseDimensions } from '@/lib/parseDimensions';
 import { NS_BF_SOURCE } from '@/bluecore/constants';
 import { isLocalScratchpad, loadRecordLocal, forkPublishedRecordOnSave } from '@/bluecore/scratchpad'; //Bluecore Plugin
 import { handleBclupSource, isBclupSource, shouldAlertFetchError } from '@/bluecore/utils';
+import { syncDancerWorkspace } from '@/bluecore/dancer';
 // BLUECORE update end
 
 // import utilsMisc from '@/lib/utils_misc';
@@ -646,6 +647,8 @@ export const useProfileStore = defineStore('profile', {
 
             let profilesURL = config.returnUrls.profiles
             let startingURL = config.returnUrls.starting
+
+            await syncDancerWorkspace(config.returnUrls) // BLUECORE: pick a valid dancer workspace (default 'Blue Core') for the code below
 
             // if dancer is enabled check to see if they have a custom workspace set
             if (config.returnUrls.dancerEnabled) {

@@ -8,6 +8,10 @@
 // domain. Override with VITE_BLUECORE_API_PATH only if the API moves off-origin.
 const apiBase = (import.meta.env.VITE_BLUECORE_API_PATH || '/api/') // Bluecore API Base Endpoint
 const utilBase = (import.meta.env.VITE_KEYCLOAK_MIDDLEWARE_BASE || '/marva/util/') //default: 'http://localhost:9401/marva/util/'
+// DCTap Dancer (profile/template editor)
+// Marva reads its workspaces and profiles from the public api/serve/ routes.
+const dancerWorkspaceList = '/marva/dancer/api/serve/workspaces'
+const dancerDefaultWorkspace = 'Blue Core'
 
 
 export const dev = {
@@ -33,7 +37,8 @@ export const dev = {
   isBibframeDotOrg: false,
   folioMLCEndpoint: 'http://localhost:9401/marva/util/folio/next-mlc/staging',
   dancerEnabled: true,
-  dancerWorkspaceList: "http://localhost:9401/marva/dancer/api/serve/workspaces",
+  dancerWorkspaceList, // DCTap Dancer workspace list
+  dancerDefaultWorkspace, // loaded when no (valid) workspace is selected
   // Features that are hidden / disabled unless the user is a demo user (see demoFeatureUsers)
   // if the user's name (catInitals => aidemo)
   restrictedFeatures: ['marvaScan', 'subjectFinder', 'linkedData'],
@@ -63,7 +68,8 @@ export const stg = {
   isBibframeDotOrg: false,
   folioMLCEndpoint: 'http://localhost:9401/marva/util/folio/next-mlc/staging',
   dancerEnabled: true,
-  dancerWorkspaceList: "http://localhost:9401/marva/dancer/api/serve/workspaces",
+  dancerWorkspaceList, // DCTap Dancer workspace list
+  dancerDefaultWorkspace, // loaded when no (valid) workspace is selected
   // Features that are hidden / disabled unless the user is a demo user (see demoFeatureUsers)
   // if the user's name (catInitals => aidemo)
   restrictedFeatures: ['marvaScan', 'subjectFinder', 'linkedData'],
@@ -93,7 +99,8 @@ export const prod = {
   isBibframeDotOrg: true,
   folioMLCEndpoint: 'http://localhost:9401/marva/util/folio/next-mlc/staging',
   dancerEnabled: true,
-  dancerWorkspaceList: "http://localhost:9401/marva/dancer/api/serve/workspaces",
+  dancerWorkspaceList, // DCTap Dancer workspace list
+  dancerDefaultWorkspace, // loaded when no (valid) workspace is selected
   // Features that are hidden / disabled unless the user is a demo user (see demoFeatureUsers)
   // if the user's name (catInitals => aidemo)
   restrictedFeatures: ['marvaScan', 'subjectFinder', 'linkedData'],

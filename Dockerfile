@@ -1,4 +1,4 @@
-FROM node:23-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
@@ -13,8 +13,9 @@ FROM nginx:stable-alpine
 # Possible values:
 #   v3.12                  a GitHub Release (publish.yml passes the tag)
 #   unversioned            a hand-run `docker build` with no --build-arg
-# (Running the stack locally via scripts/dev/run bypasses this image entirely
-# and reports "local-dev" from the stack's own nginx config.)
+# (Running the stack locally via scripts/dev/run bypasses this image; the Vite
+# dev server then answers /marva/health with the checkout's newest tag, see
+# src/bluecore/dev-health.js.)
 ARG MARVA_VERSION=unversioned
 
 COPY --from=builder /app/dist /usr/share/nginx/html/marva

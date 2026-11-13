@@ -10,7 +10,7 @@ services:
       - marva-keycloak-middleware
 
   marva-keycloak-middleware:
-    image: node:23-alpine
+    image: node:24-alpine
     working_dir: /app
     extra_hosts:
       - "keycloak:host-gateway"
