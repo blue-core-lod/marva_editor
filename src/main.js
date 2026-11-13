@@ -8,6 +8,7 @@ import i18nMessages from "./lib/i18n.js"
 import { createVfm } from 'vue-final-modal'
 import FloatingVue from 'floating-vue'
 import { redirectToSsoIfLoggedOut } from '@/bluecore/sso' // BLUECORE
+import { installBluecoreHeaderFooter } from '@/bluecore/views/install' // BLUECORE
 
 import "./assets/main.css";
 import 'vue-final-modal/style.css'
@@ -110,6 +111,7 @@ console.log(`9781534430990
 9781009534567
 9781009512923`)
 
+installBluecoreHeaderFooter(app) // BLUECORE: header, footer and their preferences (src/bluecore/views/install.js)
 if (!redirectToSsoIfLoggedOut()) app.mount("#app"); // BLUECORE: skip rendering when redirecting to SSO
 
 
