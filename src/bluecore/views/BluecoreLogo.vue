@@ -3,31 +3,34 @@
 * Blue Core logo, built from the vector pieces of the Figma "blue-core-logo-outlines"
 * component. Each piece is placed by percent so the logo scales with its width.
 */
-import part0 from '@/bluecore/assets/logo/part-0.svg'
-import part1 from '@/bluecore/assets/logo/part-1.svg'
-import part2 from '@/bluecore/assets/logo/part-2.svg'
-import part3 from '@/bluecore/assets/logo/part-3.svg'
-import part4 from '@/bluecore/assets/logo/part-4.svg'
-import part5 from '@/bluecore/assets/logo/part-5.svg'
-import part6 from '@/bluecore/assets/logo/part-6.svg'
-import part7 from '@/bluecore/assets/logo/part-7.svg'
-import part8 from '@/bluecore/assets/logo/part-8.svg'
-import part9 from '@/bluecore/assets/logo/part-9.svg'
-import part10 from '@/bluecore/assets/logo/part-10.svg'
+// the icon, in three pieces
+import iconTop from '@/bluecore/assets/logo/icon-top.svg'
+import iconMiddle from '@/bluecore/assets/logo/icon-middle.svg'
+import iconBottom from '@/bluecore/assets/logo/icon-bottom.svg'
+// "Blue"
+import blueB from '@/bluecore/assets/logo/blue-B.svg'
+import blueL from '@/bluecore/assets/logo/blue-l.svg'
+import blueU from '@/bluecore/assets/logo/blue-u.svg'
+import blueE from '@/bluecore/assets/logo/blue-e.svg'
+// "Core"
+import coreC from '@/bluecore/assets/logo/core-C.svg'
+import coreO from '@/bluecore/assets/logo/core-o.svg'
+import coreR from '@/bluecore/assets/logo/core-r.svg'
+import coreE from '@/bluecore/assets/logo/core-e.svg'
 
-// [src, top, right, bottom, left] insets in percent, from the Figma design
+// [name, src, top, right, bottom, left] insets in percent, from the Figma design
 const PARTS = [
-  [part0, 18.73, 66.13, 20.51, 25.27],
-  [part1, 15.38, 62.52, 20.51, 36.41],
-  [part2, 34.33, 52.29, 19.67, 40.37],
-  [part3, 33.5, 42.1, 19.68, 49.9],
-  [part4, 17.89, 26.74, 19.68, 62.87],
-  [part5, 33.5, 16.31, 19.67, 74.67],
-  [part6, 33.5, 9.37, 20.51, 85.54],
-  [part7, 33.5, 0, 19.68, 91.46],
-  [part8, 50.79, 89.25, 0, 0],
-  [part9, 25, 79.84, 25, 9.41],
-  [part10, 0, 89.25, 50.01, 0],
+  ['icon-top', iconTop, 0, 89.25, 50.01, 0],
+  ['icon-middle', iconMiddle, 25, 79.84, 25, 9.41],
+  ['icon-bottom', iconBottom, 50.79, 89.25, 0, 0],
+  ['blue-B', blueB, 18.73, 66.13, 20.51, 25.27],
+  ['blue-l', blueL, 15.38, 62.52, 20.51, 36.41],
+  ['blue-u', blueU, 34.33, 52.29, 19.67, 40.37],
+  ['blue-e', blueE, 33.5, 42.1, 19.68, 49.9],
+  ['core-C', coreC, 17.89, 26.74, 19.68, 62.87],
+  ['core-o', coreO, 33.5, 16.31, 19.67, 74.67],
+  ['core-r', coreR, 33.5, 9.37, 20.51, 85.54],
+  ['core-e', coreE, 33.5, 0, 19.68, 91.46],
 ]
 
 export default {
@@ -38,7 +41,8 @@ export default {
   },
   data() {
     return {
-      parts: PARTS.map(([src, top, right, bottom, left]) => ({
+      parts: PARTS.map(([name, src, top, right, bottom, left]) => ({
+        name,
         src,
         style: { top: top + '%', right: right + '%', bottom: bottom + '%', left: left + '%' },
       })),
@@ -49,7 +53,7 @@ export default {
 
 <template>
   <span class="bluecore-logo" role="img" aria-label="Blue Core" :style="{ width: width + 'px' }">
-    <span v-for="(part, i) in parts" :key="i" class="bluecore-logo-part" :style="part.style">
+    <span v-for="part in parts" :key="part.name" class="bluecore-logo-part" :data-part="part.name" :style="part.style">
       <img :src="part.src" alt="" />
     </span>
   </span>
