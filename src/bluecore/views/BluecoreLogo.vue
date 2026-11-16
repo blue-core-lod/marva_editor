@@ -17,6 +17,7 @@ import coreC from '@/bluecore/assets/logo/core-C.svg'
 import coreO from '@/bluecore/assets/logo/core-o.svg'
 import coreR from '@/bluecore/assets/logo/core-r.svg'
 import coreE from '@/bluecore/assets/logo/core-e.svg'
+import '@/bluecore/styles/bluecore-logo.css'
 
 // [name, src, top, right, bottom, left] insets in percent, from the Figma design
 const PARTS = [
@@ -58,24 +59,3 @@ export default {
     </span>
   </span>
 </template>
-
-<style scoped>
-.bluecore-logo {
-  display: block;
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 544.08 / 117;
-  flex: none;
-}
-.bluecore-logo-part {
-  position: absolute;
-}
-.bluecore-logo-part img {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-}
-</style>

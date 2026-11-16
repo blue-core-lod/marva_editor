@@ -25,7 +25,7 @@ import {
   returnBluecoreHeaderFooterHeights,
   rescaleWindowPercentToViewArea,
 } from '@/bluecore/layout'
-import '@/bluecore/views/layout.css'
+import '@/bluecore/styles/bluecore-layout.css'
 
 const PATCHED = Symbol('bluecoreRescaled')
 
@@ -95,7 +95,7 @@ export function installBluecoreHeaderFooter(app) {
         const { header, footer } = heights.value
         // #app is 100vh in main.css; leave room for the header and footer
         appEl.style.height = `calc(100vh - ${header + footer}px)`
-        // used by layout.css to move the nav bar below the header
+        // used by styles/bluecore-layout.css to move the nav bar below the header
         document.documentElement.style.setProperty('--bluecore-header-height', `${header}px`)
       })
     },

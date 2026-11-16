@@ -6,7 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createApp, defineComponent, h, nextTick } from 'vue'
 import BluecoreHeader from '@/bluecore/views/BluecoreHeader.vue'
 import BluecoreFooter from '@/bluecore/views/BluecoreFooter.vue'
-import { BLUECORE_APPS, BLUECORE_CONTACT_URL, CURRENT_APP_ID } from '@/bluecore/apps'
+import { BLUECORE_APPS, BLUECORE_CONTACT_URL, CURRENT_APP_ID } from '@/bluecore/app-links'
 import {
   BLUECORE_HEADER_FOOTER_HEIGHTS,
   PREF_HIDDEN,
@@ -109,7 +109,7 @@ describe('slim versions', () => {
       const heights = returnBluecoreHeaderFooterHeights(mode)
       const header = mountWithPinia(BluecoreHeader, { slim: mode === 'slim' })
       const footer = mountWithPinia(BluecoreFooter, { slim: mode === 'slim' })
-      // heightPx is what v-bind() in each component's <style> uses for its CSS height
+      // heightPx is the height each component sets on its root element
       expect(header.vm.heightPx).toBe(`${heights.header}px`)
       expect(footer.vm.heightPx).toBe(`${heights.footer}px`)
       header.unmount()
