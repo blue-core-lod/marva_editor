@@ -22,7 +22,7 @@ export const dev = {
   exportToCatalog: `${apiBase}export/`, // Bluecore API Endpoint (Export to Catalog)
   bluecoreSearch: `${apiBase}search/`, // Bluecore API Endpoint (Load page instance search)
   bluecoreSearchPage: `${apiBase}search`, // Bluecore Search page (Load page title/author search link)
-  validate: 'http://localhost:9401/marva/util/validate/prod',
+  validate: `${utilBase}validate/prod`, // Marva util middleware, same origin as util
   profiles: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-profiles.json',
   starting: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-starting.json',
   id: 'https://id.loc.gov/',
@@ -53,7 +53,7 @@ export const stg = {
   exportToCatalog: `${apiBase}export/`, // Bluecore API Endpoint (Export to Catalog)
   bluecoreSearch: `${apiBase}search/`, // Bluecore API Endpoint (Load page instance search)
   bluecoreSearchPage: `${apiBase}search`, // Bluecore Search page (Load page title/author search link)
-  validate: 'http://localhost:9401/marva/util/validate/prod',
+  validate: `${utilBase}validate/prod`, // Marva util middleware, same origin as util
   profiles: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-profiles.json',
   starting: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-starting.json',
   id: 'https://id.loc.gov/',
@@ -84,7 +84,7 @@ export const prod = {
   exportToCatalog: `${apiBase}export/`, // Bluecore API Endpoint (Export to Catalog)
   bluecoreSearch: `${apiBase}search/`, // Bluecore API Endpoint (Load page instance search)
   bluecoreSearchPage: `${apiBase}search`, // Bluecore Search page (Load page title/author search link)
-  validate: 'http://localhost:9401/marva/util/validate/prod',
+  validate: `${utilBase}validate/prod`, // Marva util middleware, same origin as util
   profiles: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-profiles.json',
   starting: 'https://raw.githubusercontent.com/lcnetdev/marva-profiles/refs/heads/main/marva-prod/marva-starting.json',
   id: 'https://id.loc.gov/',

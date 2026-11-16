@@ -1,0 +1,12 @@
+{
+  "name": "marva-keycloak-middleware",
+  "private": true,
+  "description": "BLUECORE: packages the middleware needs (kept apart from Marva's own)",
+  "scripts": {
+    "postinstall": "node fetch-lc-bibframe-validator.js",
+    "test": "node --test check-lc-bibframe-validator.js"
+  },
+  "dependencies": {
+    "fast-xml-parser": "5.3.3"
+  }
+}
