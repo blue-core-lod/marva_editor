@@ -393,6 +393,9 @@
                       </button>
                     </router-link>
                   </div>
+                  <div style="padding:5px;">
+                    <a href="https://bibframe.org/docs/view/documentation-marva-manual/Marva%20tools/workflows.md" target="_blank" rel="noopener">Workflows manual</a>
+                  </div>
                 </div>
 
                 <div v-if="showTestData" style="margin-top: 1em;">
@@ -431,6 +434,7 @@ import { useWorkflowStore } from '@/stores/workflow'
 import { mapStores, mapState, mapWritableState } from 'pinia'
 
 import Nav from "@/components/panels/nav/Nav.vue";
+import navPaneHeightMixin from '@/lib/navPaneHeightMixin'
 
 import utilsProfile from '@/lib/utils_profile';
 import utilsNetwork from '@/lib/utils_network';
@@ -456,6 +460,7 @@ const decimalTranslator = short("0123456789");
 
 export default {
   components: { Splitpanes, Pane, Nav, DataTable, CopyCat },
+  mixins: [navPaneHeightMixin], // keeps the nav pane height right when the window is resized
   data() {
     return {
 
@@ -743,9 +748,6 @@ export default {
     },
 
 
-    returnPixleAsPercent: function (pixles) {
-      return pixles / window.innerHeight * 100
-    },
 
     loadTestData: function (meta) {
       let href = window.location.href.split("/")
@@ -1052,7 +1054,6 @@ export default {
           let pt = this.activeProfile.rt[rt].pt
           for (let t of Object.keys(pt)){
             let target = pt[t]
-
             let structure = this.profileStore.returnStructureByComponentGuid(target['@guid'])
             let withDefaults = this.loadWithDefaults(structure)
             if (withDefaults){ // 2023416867
@@ -1168,11 +1169,11 @@ export default {
                       ],
                       "http://id.loc.gov/ontologies/bibframe/status": [
                         {
-                          "@guid": "fbRKPXtZjPU8b8E3dAFDyq",
+                          "@guid": short.generate(),
                           "@id": "http://id.loc.gov/vocabulary/mstatus/n",
                           "http://www.w3.org/2000/01/rdf-schema#label": [
                             {
-                              "@guid": "q5NhmHwzmMpug1UB7wcG8B",
+                              "@guid": short.generate(),
                               "http://www.w3.org/2000/01/rdf-schema#label": "new "
                             }
                           ],
@@ -1231,10 +1232,10 @@ export default {
                     ],
                     "http://id.loc.gov/ontologies/bibframe/descriptionAuthentication": [
                       {
-                        "@guid": "w5ez1o9m9HqWhxGXkfXhvM",
+                        "@guid": short.generate(),
                         "http://www.w3.org/2000/01/rdf-schema#label": [
                           {
-                            "@guid": "58UfyEnkTdwpL9tKpubExu",
+                            "@guid": short.generate(),
                             "http://www.w3.org/2000/01/rdf-schema#label": "pcc"
                           }
                         ],
@@ -1244,23 +1245,40 @@ export default {
                     ],
                     "http://id.loc.gov/ontologies/bibframe/descriptionConventions": [
                       {
-                        "@guid": "9M8P9neG1PB199kiVQmfQU",
+                        "@guid": short.generate(),
                         "http://www.w3.org/2000/01/rdf-schema#label": [
                           {
-                            "@guid": "mSgecYzTBHkGEBBTK3FEDj",
+                            "@guid": short.generate(),
                             "http://www.w3.org/2000/01/rdf-schema#label": "rda"
                           }
                         ],
                         "@id": "http://id.loc.gov/vocabulary/descriptionConventions/rda",
                         "@type": "http://id.loc.gov/ontologies/bibframe/DescriptionConventions"
+                      },
+                      {
+                        "@guid": short.generate(),
+                        "http://www.w3.org/2000/01/rdf-schema#label": [
+                          {
+                            "@guid": short.generate(),
+                            "http://www.w3.org/2000/01/rdf-schema#label": "pccrda"
+                          }
+                        ],
+                        "http://id.loc.gov/ontologies/bibframe/code": [
+                          {
+                            "@guid": short.generate(),
+                            "http://id.loc.gov/ontologies/bibframe/code": "pccrda"
+                          }
+                        ],
+                        "@id": "http://id.loc.gov/vocabulary/descriptionConventions/pccrda",
+                        "@type": "http://id.loc.gov/ontologies/bibframe/DescriptionConventions"
                       }
                     ],
                     "http://id.loc.gov/ontologies/bibframe/descriptionLanguage": [
                       {
-                        "@guid": "kDTk5rNZfag58xhq9T767y",
+                        "@guid": short.generate(),
                         "http://www.w3.org/2000/01/rdf-schema#label": [
                           {
-                            "@guid": "8GwwedvM9MLo2xoG4hBhMZ",
+                            "@guid": short.generate(),
                             "http://www.w3.org/2000/01/rdf-schema#label": "English"
                           }
                         ],
@@ -1270,17 +1288,17 @@ export default {
                     ],
                     "http://id.loc.gov/ontologies/bflc/catalogerId": [
                       {
-                        "@guid": "fgHPJYcNZNBkeELEUv1M3E",
+                        "@guid": short.generate(),
                         "http://id.loc.gov/ontologies/bflc/catalogerId": this.preferenceStore.catCode
                       }
                     ],
                     "http://id.loc.gov/ontologies/bflc/encodingLevel": [
                       {
-                        "@guid": "dnad4YqMcoo2ro8FVkCxfB",
+                        "@guid": short.generate(),
                         "@id": "http://id.loc.gov/vocabulary/menclvl/5",
                         "http://www.w3.org/2000/01/rdf-schema#label": [
                           {
-                            "@guid": "ncCaUaqE51cuig7YYnDThG",
+                            "@guid": short.generate(),
                             "http://www.w3.org/2000/01/rdf-schema#label": "preliminary "
                           }
                         ],
