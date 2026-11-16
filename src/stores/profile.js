@@ -183,6 +183,7 @@ export const useProfileStore = defineStore('profile', {
         emptyComponents: {},
         hiddenSubjects: false,
         hiddenClassNumbers: false,
+        hiddenGenre: false,
 
 
 
@@ -4148,6 +4149,8 @@ export const useProfileStore = defineStore('profile', {
             this.activeProfilePosted = false
             this.activeProfilePostedTimestamp = false
             this.activeProfile = await utilsProfile.loadRecordFromBackend(eid)
+
+            this.useCustomComponentOrder()
         },
 
         /**
@@ -5322,6 +5325,7 @@ export const useProfileStore = defineStore('profile', {
                 delete newPt.deleted
                 delete newPt.hideSubject
                 delete newPt.hideClassNum
+                delete newPt.hideGenre
                 delete newPt.hide
 
                 newPt.id = newPropertyId
@@ -8577,6 +8581,34 @@ export const useProfileStore = defineStore('profile', {
             return true
         },
 
+        displayGenre: function (comp) {
+            let pref = usePreferenceStore().returnValue("--b-edit-main-hide-non-lc-genre")
+            if (!pref) { return true }
+
+            try {
+                if (comp.propertyURI == "http://id.loc.gov/ontologies/bibframe/genreForm") {
+                    let userValue = comp.userValue
+                    let data = userValue["http://id.loc.gov/ontologies/bibframe/genreForm"] ? userValue["http://id.loc.gov/ontologies/bibframe/genreForm"][0] : {}
+                    let type = data['@type']
+
+                    if (data['@id'].includes('authorities/genreForm')) { return true }
+
+                    if (data["http://id.loc.gov/ontologies/bibframe/source"]) {
+                        let source = data["http://id.loc.gov/ontologies/bibframe/source"][0]
+                        if (source['@id'] != 'http://id.loc.gov/authorities/genreForms') { return false}
+                    }
+
+                    if (data['@id'] && !data['@id'].includes('authorities/genreForm')) { return false }
+
+                }
+
+                return true
+            } catch (err) {
+                console.error("Error with displayGenre preference: ", err)
+                return false
+            }
+        },
+
         displayClassNumber: function (comp) {
             let pref = usePreferenceStore().returnValue("--b-edit-main-hide-non-lc-class-numbers")
             if (!pref) { return true }
@@ -8670,6 +8702,7 @@ export const useProfileStore = defineStore('profile', {
 
             let classCount = 0
             let classHidden = 0
+            let genreHidden = 0
             let classLast = null
             let classFirst = false
             let classList = []
@@ -8709,11 +8742,17 @@ export const useProfileStore = defineStore('profile', {
                         classList.push(comp)
                         classProfile = rt
                     }
+
+                    // hidden genre/forms are only counted, no empty component is added for them
+                    if (profile.rt[rt].pt[pt].hideGenre) {
+                        genreHidden++
+                    }
                 }
             }
 
+            // a profile without subject components (e.g. Sound Recording) has nothing to duplicate
             let showingSubjects = subjectCount - subjectHidden
-            if (showingSubjects == 0) {
+            if (showingSubjects == 0 && subjectLast) {
                 // add an empty subject component
                 // componentGuid, structure
                 this.duplicateComponent(subjectLast["@guid"], this.returnStructureByGUID(subjectLast["@guid"]))
@@ -8729,8 +8768,9 @@ export const useProfileStore = defineStore('profile', {
 
             }
 
+            // same for a profile without classification components
             let showingClassNumber = classCount - classHidden
-            if (showingClassNumber == 0) {
+            if (showingClassNumber == 0 && classLast) {
                 // add an empty classNum component
                 // componentGuid, structure
                 this.duplicateComponent(classLast["@guid"], this.returnStructureByGUID(classLast["@guid"]))
@@ -8753,10 +8793,13 @@ export const useProfileStore = defineStore('profile', {
             if (classHidden > 0) {
                 this.hiddenClassNumbers = true
             }
+            if (genreHidden > 0){
+                this.hiddenGenre = true
+            }
 
             let results = {
                 'subjects': subjectCount, 'hiddenSubject': subjectHidden, 'showingSubjects': showingSubjects,
-                'classNumbers': classCount, 'hiddenClassNumbers': classHidden, 'showingClassNumbers': showingClassNumber
+                'classNumbers': classCount, 'hiddenClassNumbers': classHidden, 'hiddenGenreForms': genreHidden, 'showingClassNumbers': showingClassNumber
             }
 
             return results
