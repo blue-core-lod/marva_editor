@@ -1,8 +1,11 @@
 FROM node:24-alpine
 
-WORKDIR /app
+WORKDIR /app/middleware
 
-COPY middleware/marva-keycloak-middleware.js /app/middleware/marva-keycloak-middleware.js
+# npm ci installs packages and downloads LC's latest validator (see fetch-lc-bibframe-validator.js).
+# npm test then checks it still works, so a breaking LC change stops the build here.
+COPY middleware/ ./
+RUN npm ci --omit=dev && npm test
 
 EXPOSE 9401
 

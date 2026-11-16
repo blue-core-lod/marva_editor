@@ -3,6 +3,7 @@ const http = require('http')
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
+const { validateRecord } = require('./validate-handler')
 
 // #############################################################################
 // ##  Runtime Configuration  ##
@@ -65,6 +66,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === `${BASE_PATH}/auth/logout`) {
       return handleLogout(req, res)
+    }
+    // Validate is handled here, not sent to bibframe.org which requires LC Auth (see validate-handler.js)
+    if (req.method === 'POST' && pathname.startsWith(`${BASE_PATH}/validate/`)) {
+      return writeJson(res, 200, validateRecord(await readRequestBody(req)))
     }
     return proxyToUpstream(req, res, url)
   } catch (error) {
