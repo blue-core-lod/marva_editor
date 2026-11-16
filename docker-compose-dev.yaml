@@ -35,4 +35,4 @@ services:
       MARVA_REDIRECT_BASE: "${MARVA_REDIRECT_BASE:-http://localhost:4444/marva/}"
       CORS_ORIGIN: "${CORS_ORIGIN:-http://localhost:4444}"
       MARVA_UTIL_PATH: "${MARVA_UTIL_PATH:-https://bibframe.org}"
-    command: sh -lc "node --watch middleware/marva-keycloak-middleware.js"
+    command: sh -lc "npm install --prefix middleware && node --watch middleware/marva-keycloak-middleware.js" # Install first (downloads LC validator)
