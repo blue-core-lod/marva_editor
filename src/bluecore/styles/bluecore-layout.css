@@ -1,0 +1,7 @@
+/* BLUECORE: layout fixes for the Blue Core header, kept out of the LC components (see install.js) */
+
+/* The LC nav bar is teleported to body and positioned absolutely from the top of the page
+   (its `top` already leaves room for the MOTD banner). Push it down below the header too. */
+#nav-holder {
+  margin-top: var(--bluecore-header-height, 0px);
+}

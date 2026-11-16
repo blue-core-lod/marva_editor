@@ -1,0 +1,130 @@
+/* BLUECORE: Blue Core footer (src/bluecore/views/BluecoreFooter.vue), shared rules are in bluecore-shared.css */
+
+/* its height is set by the component, from src/bluecore/layout.js:
+   155px design height plus a 2px top border matching the header's bottom border */
+.bluecore-footer {
+  padding-left: 103px;
+  background: var(--bluecore-gray-light);
+  border-top: 2px solid var(--bluecore-blue-35);
+  border-bottom: 10px solid var(--bluecore-blue);
+}
+
+.bluecore-footer-logo {
+  margin-top: 46px;
+}
+
+.bluecore-footer-contact {
+  box-sizing: border-box;
+  width: 181px;
+  height: 36px;
+  margin: 42px 0 0 54px;
+  border-radius: 20px;
+  background: var(--bluecore-blue);
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 36px;
+  text-align: center;
+  text-decoration: none;
+  flex: none;
+}
+
+.bluecore-footer-contact:hover,
+.bluecore-footer-contact:focus-visible {
+  background: var(--bluecore-blue-dark);
+}
+
+/* the Figma divider is a 58px horizontal dotted line, rotated to stand upright */
+.bluecore-footer-divider {
+  position: relative;
+  width: 1px;
+  height: 58px;
+  margin: 42px 0 0 145px;
+  flex: none;
+}
+
+.bluecore-footer-divider img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.bluecore-footer-apps {
+  margin: 33px 0 0 12px;
+  min-width: 0;
+}
+
+.bluecore-footer-apps-heading {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 30px;
+  color: #000000;
+}
+
+.bluecore-footer-app-list {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 40px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* the links are .bluecore-link (bluecore-shared.css), lighter and taller here */
+.bluecore-footer-app-list .bluecore-link {
+  font-weight: 300;
+  line-height: 30px;
+}
+
+/* slim: one 20px row */
+.bluecore-footer-slim {
+  padding: 0 12px;
+  border-top-width: 1px;
+  border-bottom-width: 2px;
+}
+
+.bluecore-footer-slim .bluecore-footer-logo {
+  margin-top: 0;
+}
+
+.bluecore-footer-slim .bluecore-footer-contact {
+  width: auto;
+  height: 16px;
+  margin: 0 0 0 16px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* show the middle of the dotted line, cut to the slim row height */
+.bluecore-footer-slim .bluecore-footer-divider {
+  height: 14px;
+  margin: 0 0 0 20px;
+  overflow: hidden;
+}
+
+.bluecore-footer-slim .bluecore-footer-apps {
+  display: flex;
+  align-items: center;
+  margin: 0 0 0 10px;
+}
+
+.bluecore-footer-slim .bluecore-footer-apps-heading {
+  margin-right: 14px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.bluecore-footer-slim .bluecore-footer-app-list {
+  flex-wrap: nowrap;
+  column-gap: 18px;
+  margin: 0;
+}
+
+.bluecore-footer-slim .bluecore-footer-app-list .bluecore-link {
+  font-size: 12px;
+  line-height: 18px;
+}

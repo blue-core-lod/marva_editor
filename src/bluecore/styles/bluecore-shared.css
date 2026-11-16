@@ -1,0 +1,47 @@
+/* BLUECORE: styles shared by the Blue Core header, footer and logo (src/bluecore/views) */
+
+:root {
+  /* Core Blue */
+  --bluecore-blue: #003caf;
+  /* Core Blue, darker for hover */
+  --bluecore-blue-dark: #002b80;
+  /* Core Blue at 35%, the line between the header / footer and the editor */
+  --bluecore-blue-35: rgba(0, 60, 175, 0.35);
+  --bluecore-blue-light: #4368ae;
+  --bluecore-gray-light: #f0f4f7;
+  --bluecore-font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.bluecore-header,
+.bluecore-footer {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  font-family: var(--bluecore-font);
+}
+
+/* slim: one row, everything vertically centered */
+.bluecore-header-slim,
+.bluecore-footer-slim {
+  align-items: center;
+}
+
+/* dotted underlined blue link, also used on buttons that look like links */
+.bluecore-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--bluecore-blue);
+  text-decoration: underline dotted;
+  text-underline-position: from-font;
+  white-space: nowrap;
+}
+
+.bluecore-link:hover,
+.bluecore-link:focus-visible {
+  text-decoration-style: solid;
+}
