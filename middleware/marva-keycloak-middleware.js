@@ -12,6 +12,10 @@ const env = process.env
 const PORT = Number(env.MARVA_MW_PORT)
 const BASE_PATH =  '/marva/util'
 const MARVA_REDIRECT = ( env.MARVA_REDIRECT_BASE || "http://localhost/marva/" )
+// BLUECORE: where Keycloak sends the browser after logout: the Blue Core Marva login page
+// (bluecore-stack nginx/marva-login/), on the same host as Marva unless set.
+// Must be one of the client's "Valid post logout redirect URIs" in Keycloak.
+const MARVA_LOGOUT_REDIRECT = ( env.MARVA_LOGOUT_REDIRECT || new URL('/marva-login/', MARVA_REDIRECT).toString() )
 
 const KEYCLOAK_ISSUER_EXTERNAL = `${env.KEYCLOAK_EXTERNAL_URL.replace(/\/+$/, '')}/realms/bluecore`
 const KEYCLOAK_ISSUER_INTERNAL = `${env.KEYCLOAK_INTERNAL_URL.replace(/\/+$/, '')}/realms/bluecore`
@@ -26,6 +30,13 @@ const CORS_ORIGIN = env.CORS_ORIGIN || '*'
 const tokenStore = new Map()
 const subjectIndex = new Map()
 const pendingStates = new Map()
+// BLUECORE: logout handle (in the LOGOUT_COOKIE) -> { idToken, updatedAt }. Logout is a plain
+// browser navigation without the bearer token, so this is how it finds the browser's ID token
+// for id_token_hint, which lets Keycloak log out without its "Do you want to log out?" page.
+const logoutHints = new Map()
+const LOGOUT_COOKIE = 'marva_logout'
+const LOGOUT_COOKIE_PATH = `${BASE_PATH}/auth`
+const LOGOUT_HINT_TTL_MS = 24 * 60 * 60 * 1000
 
 const KEYCLOAK_ENDPOINTS = {
   authorization: `${KEYCLOAK_ISSUER_EXTERNAL}/protocol/openid-connect/auth`,
@@ -190,6 +201,11 @@ async function handleCallback(_req, res, url) {
   })
 
   writeCorsHeaders(res)
+  if (idToken) {
+    const logoutHandle = randomString(16)
+    logoutHints.set(logoutHandle, { idToken, updatedAt: Date.now() })
+    res.setHeader('Set-Cookie', logoutCookie(logoutHandle, LOGOUT_HINT_TTL_MS / 1000))
+  }
   res.writeHead(302, { Location: redirectUrl.toString() })
   res.end()
 }
@@ -268,6 +284,11 @@ async function handleRefresh(req, res) {
     expiresAt
   })
   subjectIndex.set(subject, newAccessToken)
+  const hint = logoutHints.get(readCookie(req, LOGOUT_COOKIE))
+  if (hint && payload.id_token) {
+    hint.idToken = payload.id_token
+    hint.updatedAt = Date.now()
+  }
   logEvent('info', '✅  refresh-success', { subject: subject || null })
 
   return writeJson(res, 200, { token: newAccessToken })
@@ -280,18 +301,23 @@ async function handleLogout(req, res) {
   const token = getBearerToken(req)
   const session = token ? tokenStore.get(token) : null
 
+  const logoutHandle = readCookie(req, LOGOUT_COOKIE)
+  const idToken = session?.idToken || logoutHints.get(logoutHandle)?.idToken
+
   if (token) tokenStore.delete(token)
   if (session?.subject) subjectIndex.delete(session.subject)
-  logEvent('info', 'logout-redirect', { hasSession: Boolean(session) })
+  if (logoutHandle) logoutHints.delete(logoutHandle)
+  logEvent('info', 'logout-redirect', { hasSession: Boolean(session), hasIdTokenHint: Boolean(idToken) })
 
   const logoutUrl = new URL(KEYCLOAK_ENDPOINTS.logout)
   logoutUrl.searchParams.set('client_id', 'bluecore_api')
-  logoutUrl.searchParams.set('post_logout_redirect_uri', MARVA_REDIRECT)
-  if (session?.idToken) {
-    logoutUrl.searchParams.set('id_token_hint', session.idToken)
+  logoutUrl.searchParams.set('post_logout_redirect_uri', MARVA_LOGOUT_REDIRECT)
+  if (idToken) {
+    logoutUrl.searchParams.set('id_token_hint', idToken)
   }
 
   writeCorsHeaders(res)
+  res.setHeader('Set-Cookie', logoutCookie('', 0))
   res.writeHead(302, { Location: logoutUrl.toString() })
   res.end()
 }
@@ -409,6 +435,20 @@ function getBearerToken(req) {
   return header.slice(7).trim()
 }
 
+// BLUECORE: cookie helpers for the logout handle (see logoutHints)
+function readCookie(req, name) {
+  for (const part of (req.headers.cookie || '').split(';')) {
+    const [key, ...rest] = part.trim().split('=')
+    if (key === name) return decodeURIComponent(rest.join('='))
+  }
+  return null
+}
+
+function logoutCookie(value, maxAgeSeconds) {
+  const secure = new URL(MARVA_REDIRECT).protocol === 'https:' ? '; Secure' : ''
+  return `${LOGOUT_COOKIE}=${encodeURIComponent(value)}; Path=${LOGOUT_COOKIE_PATH}; Max-Age=${Math.floor(maxAgeSeconds)}; HttpOnly; SameSite=Lax${secure}`
+}
+
 function readRequestBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = []
@@ -449,6 +489,11 @@ function cleanupStores() {
   for (const [state, data] of pendingStates) {
     if (now - data.createdAt > 10 * 60 * 1000) {
       pendingStates.delete(state)
+    }
+  }
+  for (const [handle, hint] of logoutHints) {
+    if (now - hint.updatedAt > LOGOUT_HINT_TTL_MS) {
+      logoutHints.delete(handle)
     }
   }
   for (const [accessToken, session] of tokenStore) {
