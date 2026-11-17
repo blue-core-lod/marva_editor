@@ -6,9 +6,9 @@
 // ## added to Marva.                                                         ##
 // #############################################################################
 
-// Fixed pixel heights (borders included) for each display mode. The components use
-// these for their CSS height and the layout uses them to make room, so both always
-// agree, even before the components' CSS has loaded.
+// Fixed pixel heights (borders included) for each display mode, used to make room for the
+// header and footer. Must match SIZES in bluecore-stack's
+// nginx/assets/bluecore/bluecore-header-footer.js, which draws them at these heights.
 export const BLUECORE_HEADER_FOOTER_HEIGHTS = {
   full: { header: 57, footer: 157 },
   slim: { header: 23, footer: 23 },

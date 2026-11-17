@@ -1,12 +1,11 @@
-// BLUECORE: tests for the Blue Core header and footer, their preferences, and how they are
-// added to Marva without changing the LC components (../views/install.js)
+// BLUECORE: tests for the Blue Core header and footer preferences and layout, and for how
+// ../views/install.js adds bluecore-stack's <bluecore-header> / <bluecore-footer> elements to
+// Marva without changing the LC components. The elements themselves are tested in
+// bluecore-stack (tests/ui/marva/test_login_page.py).
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createApp, defineComponent, h, nextTick } from 'vue'
-import BluecoreHeader from '@/bluecore/views/BluecoreHeader.vue'
-import BluecoreFooter from '@/bluecore/views/BluecoreFooter.vue'
-import { BLUECORE_APPS, BLUECORE_CONTACT_URL, CURRENT_APP_ID } from '@/bluecore/app-links'
 import {
   BLUECORE_HEADER_FOOTER_HEIGHTS,
   PREF_HIDDEN,
@@ -16,7 +15,12 @@ import {
   returnBluecoreHeaderFooterHeights,
   returnBluecoreHeaderFooterMode,
 } from '@/bluecore/layout'
-import { createRescaleMixin, installBluecoreHeaderFooter } from '@/bluecore/views/install'
+import {
+  HEADER_FOOTER_SCRIPT,
+  createRescaleMixin,
+  installBluecoreHeaderFooter,
+  loadHeaderFooterScript,
+} from '@/bluecore/views/install'
 import { useConfigStore } from '@/stores/config'
 import { usePreferenceStore } from '@/stores/preference'
 
@@ -27,98 +31,46 @@ beforeEach(() => {
   setActivePinia(pinia)
 })
 
-function mountWithPinia(component, props = {}) {
-  return mount(component, { props, global: { plugins: [pinia] }, attachTo: document.body })
+afterEach(() => {
+  document.head.querySelectorAll('script').forEach((script) => script.remove())
+})
+
+// jsdom doesn't fetch scripts, so the tests fire the script's load or error event themselves
+function findScript() {
+  return document.head.querySelector(`script[src="${HEADER_FOOTER_SCRIPT}"]`)
 }
 
-describe('BluecoreHeader', () => {
-  it('shows the app name and a contact link', () => {
-    const wrapper = mountWithPinia(BluecoreHeader)
-    expect(wrapper.find('.bluecore-header-app-name').text()).toContain('MARVA')
-    expect(wrapper.find(`a[href="${BLUECORE_CONTACT_URL}"]`).text()).toBe('Contact')
-    wrapper.unmount()
+async function finishLoading(eventName = 'load') {
+  findScript().dispatchEvent(new Event(eventName))
+  // let the load promise resolve and the watchers run
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  await nextTick()
+}
+
+describe('loadHeaderFooterScript', () => {
+  it('adds the stack script and resolves true once it loads', async () => {
+    const result = loadHeaderFooterScript()
+    expect(findScript()).not.toBeNull()
+    findScript().dispatchEvent(new Event('load'))
+    await expect(result).resolves.toBe(true)
   })
 
-  it('opens the app menu with every app except Marva, and closes it on Escape', async () => {
-    const wrapper = mountWithPinia(BluecoreHeader)
-    const button = wrapper.find('.bluecore-app-switcher-button')
-    const menu = wrapper.find('#bluecore-app-menu')
-    expect(menu.isVisible()).toBe(false)
-
-    await button.trigger('click')
-    expect(menu.isVisible()).toBe(true)
-    expect(button.attributes('aria-expanded')).toBe('true')
-    const labels = menu.findAll('a').map((a) => a.text())
-    expect(labels).toEqual(BLUECORE_APPS.filter((a) => a.id !== CURRENT_APP_ID).map((a) => a.label))
-
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
-    await nextTick()
-    expect(menu.isVisible()).toBe(false)
-    wrapper.unmount()
-  })
-
-  it('closes the app menu on a click outside it', async () => {
-    const wrapper = mountWithPinia(BluecoreHeader)
-    await wrapper.find('.bluecore-app-switcher-button').trigger('click')
-    document.body.click()
-    await nextTick()
-    expect(wrapper.find('#bluecore-app-menu').isVisible()).toBe(false)
-    wrapper.unmount()
-  })
-
-  it('only shows Logout for a signed in user, and logs out through the util service', async () => {
-    const wrapper = mountWithPinia(BluecoreHeader)
-    const preferenceStore = usePreferenceStore()
-    const configStore = useConfigStore()
-    const findLogout = () => wrapper.findAll('button').find((b) => b.text() === 'Logout')
-    expect(findLogout()).toBeUndefined()
-
-    preferenceStore.ssoUser = { name: 'Test User' }
-    await nextTick()
-    const logoutSpy = vi.spyOn(preferenceStore, 'ssoLogout').mockImplementation(() => {})
-    await findLogout().trigger('click')
-    expect(logoutSpy).toHaveBeenCalledWith(configStore.returnUrls.util)
-    wrapper.unmount()
-  })
-})
-
-describe('BluecoreFooter', () => {
-  it('links to every Blue Core app and the contact address', () => {
-    const wrapper = mountWithPinia(BluecoreFooter)
-    const links = wrapper.findAll('.bluecore-footer-app-list a')
-    expect(links.map((a) => [a.text(), a.attributes('href')])).toEqual(BLUECORE_APPS.map((a) => [a.label, a.href]))
-    expect(wrapper.find('.bluecore-footer-contact').attributes('href')).toBe(BLUECORE_CONTACT_URL)
-    wrapper.unmount()
-  })
-})
-
-describe('slim versions', () => {
-  it('header and footer add their slim class only when slim is set', () => {
-    for (const component of [BluecoreHeader, BluecoreFooter]) {
-      const full = mountWithPinia(component)
-      const slim = mountWithPinia(component, { slim: true })
-      expect(full.classes().some((c) => c.endsWith('-slim'))).toBe(false)
-      expect(slim.classes().some((c) => c.endsWith('-slim'))).toBe(true)
-      full.unmount()
-      slim.unmount()
-    }
-  })
-
-  it('sizes header and footer from the shared layout heights for each mode', () => {
-    for (const mode of ['full', 'slim']) {
-      const heights = returnBluecoreHeaderFooterHeights(mode)
-      const header = mountWithPinia(BluecoreHeader, { slim: mode === 'slim' })
-      const footer = mountWithPinia(BluecoreFooter, { slim: mode === 'slim' })
-      // heightPx is the height each component sets on its root element
-      expect(header.vm.heightPx).toBe(`${heights.header}px`)
-      expect(footer.vm.heightPx).toBe(`${heights.footer}px`)
-      header.unmount()
-      footer.unmount()
-    }
+  it('resolves false when the script is not there (Marva without the stack)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const result = loadHeaderFooterScript()
+    findScript().dispatchEvent(new Event('error'))
+    await expect(result).resolves.toBe(false)
+    warn.mockRestore()
   })
 })
 
 describe('layout helpers', () => {
+  it('gives the same heights as the stack draws the header and footer at', () => {
+    // bluecore-stack nginx/assets/bluecore/bluecore-header-footer.js SIZES
+    expect(returnBluecoreHeaderFooterHeights('full')).toEqual({ header: 57, footer: 157 })
+    expect(returnBluecoreHeaderFooterHeights('slim')).toEqual({ header: 23, footer: 23 })
+  })
+
   it('gives no height when hidden, and full heights for an unknown mode', () => {
     expect(returnBluecoreHeaderFooterHeights('hidden')).toEqual({ header: 0, footer: 0 })
     expect(returnBluecoreHeaderFooterHeights('tiny')).toEqual(BLUECORE_HEADER_FOOTER_HEIGHTS.full)
@@ -223,31 +175,74 @@ describe('installBluecoreHeaderFooter', () => {
     return usePreferenceStore(pinia)
   }
 
-  it('puts the header above #app and the footer below, and makes room for them', async () => {
+  const header = () => document.querySelector('bluecore-header')
+  const footer = () => document.querySelector('bluecore-footer')
+
+  it('keeps no room for them until the stack script has loaded', async () => {
     await installAndMount()
-    expect(appEl.previousElementSibling.querySelector('.bluecore-header')).not.toBeNull()
-    expect(appEl.nextElementSibling.querySelector('.bluecore-footer')).not.toBeNull()
-    const { header, footer } = BLUECORE_HEADER_FOOTER_HEIGHTS.full
-    expect(appEl.style.height).toBe(`calc(100vh - ${header + footer}px)`)
-    expect(document.documentElement.style.getPropertyValue('--bluecore-header-height')).toBe(`${header}px`)
+    expect(findScript()).not.toBeNull()
+    expect(header()).toBeNull()
+    expect(appEl.style.height).toBe('calc(100vh - 0px)')
+  })
+
+  it('puts the header above #app and the footer below once loaded, and makes room for them', async () => {
+    await installAndMount()
+    await finishLoading()
+    expect(appEl.previousElementSibling).toBe(header())
+    expect(appEl.nextElementSibling).toBe(footer())
+    expect(header().getAttribute('app-name')).toBe('MARVA')
+    expect(header().getAttribute('current-app')).toBe('marva')
+    const { header: headerHeight, footer: footerHeight } = BLUECORE_HEADER_FOOTER_HEIGHTS.full
+    expect(appEl.style.height).toBe(`calc(100vh - ${headerHeight + footerHeight}px)`)
+    expect(document.documentElement.style.getPropertyValue('--bluecore-header-height')).toBe(`${headerHeight}px`)
+  })
+
+  it('shows neither, and takes the whole window, when the script fails to load', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await installAndMount()
+    await finishLoading('error')
+    expect(header()).toBeNull()
+    expect(footer()).toBeNull()
+    expect(appEl.style.height).toBe('calc(100vh - 0px)')
+    warn.mockRestore()
   })
 
   it('follows the slim and hide preferences', async () => {
     const preferenceStore = await installAndMount()
+    await finishLoading()
+    expect(header().hasAttribute('slim')).toBe(false)
 
     preferenceStore.setValue(PREF_SLIM, true)
     await nextTick()
-    expect(document.querySelector('.bluecore-header-slim')).not.toBeNull()
-    expect(document.querySelector('.bluecore-footer-slim')).not.toBeNull()
+    expect(header().hasAttribute('slim')).toBe(true)
+    expect(footer().hasAttribute('slim')).toBe(true)
     const slim = BLUECORE_HEADER_FOOTER_HEIGHTS.slim
     expect(appEl.style.height).toBe(`calc(100vh - ${slim.header + slim.footer}px)`)
 
     preferenceStore.setValue(PREF_HIDDEN, true)
     await nextTick()
-    expect(document.querySelector('.bluecore-header')).toBeNull()
-    expect(document.querySelector('.bluecore-footer')).toBeNull()
+    expect(header()).toBeNull()
+    expect(footer()).toBeNull()
     expect(appEl.style.height).toBe('calc(100vh - 0px)')
-    expect(document.documentElement.style.getPropertyValue('--bluecore-header-height')).toBe('0px')
+
+    preferenceStore.setValue(PREF_HIDDEN, false)
+    await nextTick()
+    expect(appEl.previousElementSibling).toBe(header())
+    expect(appEl.nextElementSibling).toBe(footer())
+  })
+
+  it('only offers Logout to a signed in user, and logs out through the util service', async () => {
+    const preferenceStore = await installAndMount()
+    await finishLoading()
+    expect(header().hasAttribute('logout')).toBe(false)
+
+    preferenceStore.ssoUser = { name: 'Test User' }
+    await nextTick()
+    expect(header().hasAttribute('logout')).toBe(true)
+
+    const logoutSpy = vi.spyOn(preferenceStore, 'ssoLogout').mockImplementation(() => {})
+    header().dispatchEvent(new CustomEvent('bluecore-logout', { bubbles: true }))
+    expect(logoutSpy).toHaveBeenCalledWith(useConfigStore(pinia).returnUrls.util)
   })
 
   it('adds the Blue Core preferences before the app loads saved ones', async () => {
