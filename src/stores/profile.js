@@ -1927,6 +1927,20 @@ export const useProfileStore = defineStore('profile', {
 
             if (pt !== false) {
 
+                // a genre/form term shares its node with the thesaurus; removing the term keeps
+                // a thesaurus the cataloger chose (one the popup can't search, e.g. OLAC)
+                let node = utilsProfile.returnGuidLocation(pt.userValue, fieldGuid)
+                if (pt.propertyURI === 'http://id.loc.gov/ontologies/bibframe/genreForm' && node && this.hasSourceNotInLookup(node)) {
+                    delete node['@id']
+                    for (let key of Object.keys(node).filter((k) => !k.startsWith("@"))) {
+                        if (key !== 'http://id.loc.gov/ontologies/bibframe/source') {
+                            delete node[key]
+                        }
+                    }
+                    this.dataChanged()
+                    return
+                }
+
                 // find the correct blank node to edit if possible,
 
                 let parent = utilsProfile.returnGuidParent(pt.userValue, fieldGuid)
@@ -2663,6 +2677,38 @@ export const useProfileStore = defineStore('profile', {
         * @param {array} propertyPath - array of strings mapping the predicates to the blanknode for the value
         * @return {array} - an array of objs representing the simple lookup values
         */
+        /**
+        * True when a genre/form already has a thesaurus (bf:source) that the lookup popup can't search,
+        * e.g. OLAC video game genre terms. Its terms have to be entered as literals instead.
+        *
+        * @param {string} componentGuid - the guid of the component
+        * @param {array} propertyPath - the property path of the term's lookup field
+        * @return {boolean}
+        */
+        genreFormSourceNotInLookup: function (componentGuid, propertyPath) {
+            const genreForm = 'http://id.loc.gov/ontologies/bibframe/genreForm'
+            if (!propertyPath || !propertyPath.some((p) => p.propertyURI === genreForm)) {
+                return false
+            }
+            // the thesauri the popup searches (see the genreForms lookup in config.js)
+            let pt = utilsProfile.returnPt(this.activeProfile, componentGuid)
+            let node = pt && pt.userValue && pt.userValue[genreForm] && pt.userValue[genreForm][0]
+            return this.hasSourceNotInLookup(node)
+        },
+
+        // True when the node's bf:source isn't one of the thesauri the genre/form popup searches,
+        // which means the cataloger chose it, rather than it coming with an LCGFT/RBMS term
+        hasSourceNotInLookup: function (node) {
+            const searchable = [
+                'http://id.loc.gov/vocabulary/genreFormSchemes/lcgft',
+                'http://id.loc.gov/vocabulary/genreFormSchemes/rbmscv',
+                'http://id.loc.gov/authorities/genreForms/collection_LCGFT_General',
+                'http://id.loc.gov/vocabulary/rbms/collection_rbmscv',
+            ]
+            let sources = (node && node['http://id.loc.gov/ontologies/bibframe/source']) || []
+            return sources.some((s) => s['@id'] && !searchable.includes(s['@id']))
+        },
+
         returnComplexLookupValueFromProfile: function (componentGuid, propertyPath) {
             // TODO: reconcile this to how the profiles are built, or dont..
             // remove the sameAs from this property path, which will be the last one, we don't need it
@@ -2886,7 +2932,11 @@ export const useProfileStore = defineStore('profile', {
                     blankNode = utilsProfile.returnGuidLocation(pt.userValue, buildBlankNodeResult[1])
 
                     //empty out the blankNode's existing data so it only has the new data
+                    // a literal (no URI) keeps the source the cataloger already chose, e.g. a non-LCGFT thesaurus
                     for (let key of Object.keys(blankNode).filter((k) => !k.startsWith("@"))) {
+                        if (URI === null && key === 'http://id.loc.gov/ontologies/bibframe/source') {
+                            continue
+                        }
                         blankNode[key] = []
                     }
 

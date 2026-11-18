@@ -6,7 +6,7 @@
 
 
       <span class="bfcode-display-mode-holder-label" :title="structure.propertyLabel">{{profileStore.returnBfCodeLabel(structure)}}:</span>
-      <input class="input-inline-mode can-select" @keyup="navKey" v-on:keydown.enter.prevent="submitField" v-model="searchValue" ref="lookupInput" @focusin="focused" type="text" @input="textInputEvent($event)" :data-field-guid="guid" :data-guid="structure['@guid']" :disabled="readOnly" />
+      <input class="input-inline-mode can-select" @keyup="navKey" v-on:keydown.enter.prevent="submitField" v-model="searchValue" ref="lookupInput" @focusin="focused" @blur="blurField" type="text" @input="textInputEvent($event)" :data-field-guid="guid" :data-guid="structure['@guid']" :disabled="readOnly" />
 
 
 
@@ -78,7 +78,7 @@
                       </div>
                     </div>
 
-                    <input style="width:auto" @keyup="navKey" class="can-select" :data-field-guid="guid" :data-guid="structure['@guid']" v-on:keydown.enter.prevent="submitField" v-model="searchValue" ref="lookupInput" @focusin="focused" type="text" @input="textInputEvent($event)" :disabled="readOnly"
+                    <input style="width:auto" @keyup="navKey" class="can-select" :data-field-guid="guid" :data-guid="structure['@guid']" v-on:keydown.enter.prevent="submitField" v-model="searchValue" ref="lookupInput" @focusin="focused" @blur="blurField" type="text" @input="textInputEvent($event)" :disabled="readOnly"
                       :placeholder='showPlaceholder ? structure.propertyLabel : ""'
                     />
                     <!-- @keydown="keyDownEvent($event)" @keyup="keyUpEvent($event)"  -->
@@ -115,7 +115,7 @@
             </div>
 
             <div class="lookup-fake-input-text">
-              <input   v-on:keydown.enter.prevent="submitField" @keyup="navKey" class="can-select" :data-guid="structure['@guid']" :data-field-guid="guid" v-model="searchValue" ref="lookupInput" @focusin="focused" type="text" @input="textInputEvent($event)" :disabled="readOnly"
+              <input   v-on:keydown.enter.prevent="submitField" @keyup="navKey" class="can-select" :data-guid="structure['@guid']" :data-field-guid="guid" v-model="searchValue" ref="lookupInput" @focusin="focused" @blur="blurField" type="text" @input="textInputEvent($event)" :disabled="readOnly"
                 :placeholder='showPlaceholder ? structure.propertyLabel : ""'
               />
                 <!-- @keydown="keyDownEvent($event)" @keyup="keyUpEvent($event)"  -->
@@ -647,11 +647,37 @@ export default {
 
 
 
+      }else if (this.profileStore.genreFormSourceNotInLookup(this.guid, this.propertyPath)){
+        // the popup can't search this thesaurus, so let them type the term and press Enter to add it as a literal
+        return false
       }else{
         this.displayModal=true
       }
 
 
+    },
+
+    // adds the typed term as a literal when the popup can't search the chosen thesaurus
+    submitField: function(){
+      if (this.addTypedTermAsLiteral()){
+        this.setComplexValue({literal: true, title: this.searchValue.trim(), extra: {}})
+      }
+    },
+
+    // changing focus away from input behaves like hitting enter
+    blurField: function(){
+      window.setTimeout(() => {
+        if (this.addTypedTermAsLiteral()){
+          // set it directly rather than through setComplexValue, which would pull focus back to this input
+          this.profileStore.setValueComplex(this.guid, null, this.propertyPath, null, this.searchValue.trim(), null, {}, null)
+          this.searchValue = ''
+        }
+      }, 250)
+    },
+
+    // true when there's typed text and the popup can't search the chosen thesaurus
+    addTypedTermAsLiteral: function(){
+      return (this.searchValue || '').trim() !== '' && this.profileStore.genreFormSourceNotInLookup(this.guid, this.propertyPath)
     },
 
 
