@@ -461,6 +461,8 @@ describe('bluestore lookups', () => {
     },
   }
   const json = (body, status = 200) => Promise.resolve({ status, ok: status < 400, json: () => Promise.resolve(body) })
+  // GET /{kind}/{uuid}/versions, oldest first
+  const versions = (...timestamps) => json({ versions: timestamps.map((timestamp, i) => ({ id: i + 1, timestamp, user: 'cataloger' })) })
 
   it('finds the Instance and Work UUIDs of a record', () => {
     expect(returnBluestoreRefs(profile)).toEqual([{ kind: 'works', uuid: WORK }, { kind: 'instances', uuid: INSTANCE }])
@@ -468,11 +470,14 @@ describe('bluestore lookups', () => {
     expect(returnBluestoreRefs(null)).toEqual([])
   })
 
-  it('uses the latest updated_at of the Instance and Work, read as UTC', async () => {
-    const fetchFn = vi.fn((url) => json({ updated_at: url.includes('/works/') ? '2026-11-17T14:00:00.123456' : '2026-11-17T15:30:00' }))
+  it('uses the latest version of the Instance and Work', async () => {
+    const fetchFn = vi.fn((url) => (url.includes('/works/')
+      ? versions('2026-11-17T13:00:00Z', '2026-11-17T14:00:00.123456Z')
+      : versions('2026-11-17T15:30:00Z')))
     const result = await fetchBluestoreState(returnBluestoreRefs(profile), fetchFn)
     expect(result).toEqual({ state: 'found', updatedAt: Date.parse('2026-11-17T15:30:00Z') })
-    expect(fetchFn).toHaveBeenCalledWith(`/api/instances/${INSTANCE}`, { headers: { Accept: 'application/vnd.sinopia+json' } })
+    expect(fetchFn).toHaveBeenCalledWith(`/api/instances/${INSTANCE}/versions`)
+    expect(fetchFn).toHaveBeenCalledWith(`/api/works/${WORK}/versions`)
   })
 
   it('is missing on 404, and an error when the API fails', async () => {
@@ -480,6 +485,7 @@ describe('bluestore lookups', () => {
     expect(await fetchBluestoreState(refs, () => json({}, 404))).toEqual({ state: 'missing', updatedAt: null })
     expect(await fetchBluestoreState(refs, () => json({}, 500))).toEqual({ state: 'error', updatedAt: null })
     expect(await fetchBluestoreState(refs, () => Promise.reject(new Error('offline')))).toEqual({ state: 'error', updatedAt: null })
+    expect(await fetchBluestoreState(refs, () => versions())).toEqual({ state: 'error', updatedAt: null })
   })
 
   it('finds a new record by the Blue Core URIs it was published under', async () => {
@@ -496,7 +502,7 @@ describe('bluestore lookups', () => {
 
   it('checks once, then shows the stored time', async () => {
     const status = newStatus({ bluestore: { state: 'missing', updatedAt: null } })
-    const fetchFn = vi.fn(() => json({ updated_at: '2026-11-17T15:00:00' }))
+    const fetchFn = vi.fn(() => versions('2026-11-17T15:00:00Z'))
     await createBluestoreChecker({ status, returnProfile: () => profile, fetchFn })()
     expect(fetchFn).toHaveBeenCalledTimes(2)
     expect(status.bluestore).toEqual({ state: 'found', updatedAt: Date.parse('2026-11-17T15:00:00Z') })
@@ -510,7 +516,7 @@ describe('bluestore lookups', () => {
     let release
     const slow = new Promise((resolve) => { release = resolve })
     const fetchFn = vi.fn()
-      .mockImplementationOnce(() => slow.then(() => json({ updated_at: '2026-01-01T00:00:00' })))
+      .mockImplementationOnce(() => slow.then(() => versions('2026-01-01T00:00:00Z')))
       .mockImplementation(() => json({}, 404))
     const check = createBluestoreChecker({ status, returnProfile: () => profile, fetchFn })
     const first = check()

@@ -1,15 +1,16 @@
-// BLUECORE: tests for publishing to the Blue Core API (../publish.js) and the RDF/XML to
-// JSON-LD conversion it sends (../rdfxml.js).
+// BLUECORE: tests for publishing to the Blue Core API (../publish.js).
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { rdfxmlToJsonld } from '@/bluecore/rdfxml'
 import {
   applyBluecoreResourceLinks,
   installBluecorePublish,
+  isLoadedFromOutside,
+  parseRecord,
   publishToBluecore,
   renameUris,
   returnBluecoreRef,
   returnDerivedFrom,
   returnPublishedUri,
+  returnRequestBody,
   returnResourcesToSave,
 } from '@/bluecore/publish'
 
@@ -17,6 +18,9 @@ const BF = 'http://id.loc.gov/ontologies/bibframe/'
 const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
 const LC_WORK = 'http://id.loc.gov/resources/works/11111111-1111-4111-8111-111111111111'
 const LC_INSTANCE = 'http://id.loc.gov/resources/instances/22222222-2222-4222-8222-222222222222'
+// the placeholder URIs Marva gives a record made in Marva
+const NEW_WORK = 'http://id.loc.gov/resources/works/e1795181630835'
+const NEW_INSTANCE = 'http://id.loc.gov/resources/instances/e1795181630835'
 const BC_WORK = 'https://bcld.info/works/33333333-3333-4333-8333-333333333333'
 const BC_INSTANCE = 'https://bcld.info/instances/44444444-4444-4444-8444-444444444444'
 const BC_HUB = 'https://bcld.info/hubs/55555555-5555-4555-8555-555555555555'
@@ -38,66 +42,51 @@ const saved = (uri, derivedFrom, extra = {}) => ({
   uri, updated_at: '2026-11-19T10:00:00', data: { adminMetadata: [{ derivedFrom: [{ '@id': derivedFrom }] }], ...extra },
 })
 // a fake API: route(method, url, body) returns the response
-const api = (route) => vi.fn((url, options) => route(options.method, url, options.body ? JSON.parse(options.body) : null))
-const sent = (fetchFn, i) => JSON.parse(JSON.parse(fetchFn.mock.calls[i][1].body).data)
+const api = (route) => vi.fn((url, options) => route(options.method, url, options.body || null))
+// the RDF/XML a call sent
+const sent = (fetchFn, i) => fetchFn.mock.calls[i][1].body
 
 beforeEach(() => window.localStorage.clear())
 
-describe('rdfxmlToJsonld', () => {
-  const byId = (nodes, id) => nodes.find((n) => n['@id'] === id)
-
-  it('reads typed nodes, links, literals, languages and datatypes', () => {
-    const nodes = rdfxmlToJsonld(rdf(`
-      <bf:Work rdf:about="${LC_WORK}" xml:lang="fr">
-        <rdf:type rdf:resource="${BF}Text"/>
-        <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/fre"/>
-        <bf:title><bf:Title><bf:mainTitle>Le titre</bf:mainTitle></bf:Title></bf:title>
-        <bf:date rdf:datatype="http://id.loc.gov/datatypes/edtf">2026</bf:date>
-      </bf:Work>`))
-    const work = byId(nodes, LC_WORK)
-    expect(work['@type']).toEqual([`${BF}Work`, `${BF}Text`])
-    expect(work[`${BF}language`]).toEqual([{ '@id': 'http://id.loc.gov/vocabulary/languages/fre' }])
-    expect(work[`${BF}date`]).toEqual([{ '@value': '2026', '@type': 'http://id.loc.gov/datatypes/edtf' }])
-    const title = byId(nodes, work[`${BF}title`][0]['@id'])
-    expect(title['@id']).toMatch(/^_:/)
-    expect(title['@type']).toEqual([`${BF}Title`])
-    expect(title[`${BF}mainTitle`]).toEqual([{ '@value': 'Le titre', '@language': 'fr' }])
-  })
-
-  it('reads rdf:Description, rdf:nodeID, attribute values and the parseTypes', () => {
-    const nodes = rdfxmlToJsonld(rdf(`
-      <rdf:Description rdf:about="${LC_INSTANCE}" bf:code="abc">
-        <bf:note rdf:nodeID="n1"/>
-        <bf:extent rdf:parseType="Resource"><rdfs:label>300 p.</rdfs:label></bf:extent>
-        <bf:summary rdf:parseType="Literal"><b>bold</b></bf:summary>
-        <bf:part rdf:parseType="Collection"><bf:Title><bf:mainTitle>one</bf:mainTitle></bf:Title></bf:part>
-      </rdf:Description>`))
-    const instance = byId(nodes, LC_INSTANCE)
-    expect(instance['@type']).toBeUndefined()
-    expect(instance[`${BF}code`]).toEqual([{ '@value': 'abc' }])
-    expect(instance[`${BF}note`]).toEqual([{ '@id': '_:n1' }])
-    const extent = byId(nodes, instance[`${BF}extent`][0]['@id'])
-    expect(extent['http://www.w3.org/2000/01/rdf-schema#label']).toEqual([{ '@value': '300 p.' }])
-    expect(instance[`${BF}summary`][0]['@type']).toBe(`${RDF}XMLLiteral`)
-    expect(instance[`${BF}summary`][0]['@value']).toContain('bold</b>')
-    expect(instance[`${BF}part`][0]['@list']).toHaveLength(1)
-  })
-
-  it('says when the XML cannot be read', () => {
-    expect(() => rdfxmlToJsonld('<rdf:RDF')).toThrow(/could not be read/)
-  })
-})
-
 describe('reading a record to publish', () => {
   it('saves Works before Instances, and Hubs on their own', () => {
-    const nodes = rdfxmlToJsonld(record(LC_WORK, LC_INSTANCE))
-    expect(returnResourcesToSave(nodes)).toEqual([
+    const doc = parseRecord(record(LC_WORK, LC_INSTANCE))
+    expect(returnResourcesToSave(doc)).toEqual([
       { collection: 'works', label: 'Work', uri: LC_WORK },
       { collection: 'instances', label: 'Instance', uri: LC_INSTANCE },
     ])
-    const hub = rdfxmlToJsonld(rdf(`<bf:Hub rdf:about="${BC_HUB}"><rdf:type rdf:resource="${BF}Work"/></bf:Hub>`))
+    const hub = parseRecord(rdf(`<bf:Hub rdf:about="${BC_HUB}"><rdf:type rdf:resource="${BF}Work"/></bf:Hub>`))
     expect(returnResourcesToSave(hub)).toEqual([])
     expect(returnResourcesToSave(hub, true)).toEqual([{ collection: 'hubs', label: 'Hub', uri: BC_HUB }])
+  })
+
+  it('tells records loaded from outside Blue Core from ones made in Marva or loaded from Blue Core', () => {
+    const loaded = (from) => ({ log: [{ action: 'loadInstance', from }] })
+    expect(isLoadedFromOutside(loaded('https://id.loc.gov/resources/instances/12618072.html'))).toBe(true)
+    expect(isLoadedFromOutside(loaded(`${BC_INSTANCE}`))).toBe(false)
+    expect(isLoadedFromOutside(loaded('44444444-4444-4444-8444-444444444444'))).toBe(false)
+    expect(isLoadedFromOutside({ log: [{ action: 'createWorkInstance' }] })).toBe(false)
+    expect(isLoadedFromOutside({ id: 'Hub' })).toBe(false)
+    expect(isLoadedFromOutside(null)).toBe(false)
+  })
+
+  it('sends a new record with an empty URI, without the other new records', () => {
+    const doc = parseRecord(rdf(`
+      <bf:Work rdf:about="${NEW_WORK}">
+        <bf:hasInstance><bf:Instance rdf:about="${NEW_INSTANCE}"><bf:instanceOf rdf:resource="${NEW_WORK}"/></bf:Instance></bf:hasInstance>
+        <bf:language rdf:resource="http://id.loc.gov/vocabulary/languages/eng"/>
+      </bf:Work>`))
+    const unsaved = new Set([NEW_WORK, NEW_INSTANCE])
+    const work = returnRequestBody(doc, NEW_WORK, unsaved)
+    expect(work).not.toContain('e1795181630835')
+    expect(work).not.toContain('hasInstance')
+    expect(work).toContain('<bf:Work rdf:about="">')
+    expect(work).toContain('languages/eng')
+    // the record itself is left as it was
+    expect(new XMLSerializer().serializeToString(doc)).toContain(NEW_INSTANCE)
+    // once the Work is saved, the Instance goes with a link to it
+    expect(returnRequestBody(renameUris(doc, { [NEW_WORK]: BC_WORK }), NEW_INSTANCE, new Set([NEW_INSTANCE])))
+      .toContain(`<bf:Instance rdf:about=""><bf:instanceOf rdf:resource="${BC_WORK}"/>`)
   })
 
   it('tells Blue Core URIs from others', () => {
@@ -107,32 +96,79 @@ describe('reading a record to publish', () => {
   })
 
   it('renames URIs anywhere in the record, and reads derivedFrom', () => {
-    const nodes = renameUris(rdfxmlToJsonld(record(LC_WORK, LC_INSTANCE)), { [LC_WORK]: BC_WORK })
-    expect(JSON.stringify(nodes)).not.toContain(LC_WORK)
-    expect(nodes.find((n) => n['@id'] === LC_INSTANCE)[`${BF}instanceOf`]).toEqual([{ '@id': BC_WORK }])
+    const doc = renameUris(parseRecord(record(LC_WORK, LC_INSTANCE)), { [LC_WORK]: BC_WORK })
+    const xml = new XMLSerializer().serializeToString(doc)
+    expect(xml).not.toContain(LC_WORK)
+    expect(xml).toContain(`<bf:Work rdf:about="${BC_WORK}">`)
+    expect(xml).toContain(`<bf:instanceOf rdf:resource="${BC_WORK}"/>`)
     expect(returnDerivedFrom(saved(BC_WORK, LC_WORK))).toEqual({ [LC_WORK]: BC_WORK })
     expect(returnDerivedFrom({ uri: BC_WORK, data: { adminMetadata: { derivedFrom: LC_WORK } } })).toEqual({ [LC_WORK]: BC_WORK })
   })
 })
 
 describe('publishToBluecore', () => {
-  it('saves a new record: POSTs the Work, finds its Instance, then PUTs the Instance', async () => {
+  it('saves a record made in Marva as Sinopia does: POSTs the Work, then its Instance, with no URIs', async () => {
+    const fetchFn = api((method, url) => {
+      if (method === 'POST' && url === '/api/works/') { return response(saved(BC_WORK, null), 201) }
+      if (method === 'POST' && url === '/api/instances/') { return response(saved(BC_INSTANCE, null), 201) }
+      return response({ detail: 'unexpected' }, 500)
+    })
+    const result = await publishToBluecore(record(NEW_WORK, NEW_INSTANCE), { fetchFn })
+
+    expect(fetchFn.mock.calls.map(([url, o]) => `${o.method} ${url}`)).toEqual(['POST /api/works/', 'POST /api/instances/'])
+    // no placeholder URI is sent, so Blue Core records no derivedFrom
+    expect(sent(fetchFn, 0)).not.toContain('e1795181630835')
+    expect(sent(fetchFn, 0)).toContain('<bf:Work rdf:about="">')
+    expect(sent(fetchFn, 0)).not.toContain('bf:Instance')
+    expect(sent(fetchFn, 1)).not.toContain('e1795181630835')
+    expect(sent(fetchFn, 1)).toContain('<bf:Instance rdf:about="">')
+    expect(sent(fetchFn, 1)).toContain(`<bf:instanceOf rdf:resource="${BC_WORK}"/>`)
+    expect(result).toMatchObject({ status: true, postLocation: BC_INSTANCE })
+    expect(returnPublishedUri(NEW_WORK)).toBe(BC_WORK)
+    expect(returnPublishedUri(NEW_INSTANCE)).toBe(BC_INSTANCE)
+
+    // published again, it updates the same records
+    const again = api((method, url) => response(saved(url.includes('/works/') ? BC_WORK : BC_INSTANCE, null)))
+    await publishToBluecore(record(NEW_WORK, NEW_INSTANCE), { fetchFn: again })
+    expect(again.mock.calls.map(([url, o]) => `${o.method} ${url}`)).toEqual([
+      'PUT /api/works/33333333-3333-4333-8333-333333333333',
+      'PUT /api/instances/44444444-4444-4444-8444-444444444444',
+    ])
+  })
+
+  it('adds a new Instance to a Work already in Blue Core', async () => {
+    const fetchFn = api((method, url) => response(saved(url.includes('/works/') ? BC_WORK : BC_INSTANCE, null), method === 'POST' ? 201 : 200))
+    await publishToBluecore(record(BC_WORK, NEW_INSTANCE), { fetchFn })
+    expect(fetchFn.mock.calls.map(([url, o]) => `${o.method} ${url}`)).toEqual([
+      'PUT /api/works/33333333-3333-4333-8333-333333333333',
+      'POST /api/instances/',
+    ])
+    expect(sent(fetchFn, 0)).not.toContain('e1795181630835')
+    expect(sent(fetchFn, 1)).toContain('<bf:Instance rdf:about="">')
+  })
+
+  it('ingests a record loaded from outside: POSTs the Work, finds its Instance, then PUTs the Instance', async () => {
     const fetchFn = api((method, url) => {
       if (method === 'POST' && url === '/api/works/') { return response(saved(BC_WORK, LC_WORK, { hasInstance: [BC_INSTANCE] }), 201) }
-      if (method === 'GET') { return response(saved(BC_INSTANCE, LC_INSTANCE)) }
+      // the Instance's JSON-LD
+      if (method === 'GET') { return response({ '@id': BC_INSTANCE, adminMetadata: [{ derivedFrom: { '@id': LC_INSTANCE } }] }) }
       if (method === 'PUT') { return response(saved(BC_INSTANCE, LC_INSTANCE)) }
       return response({ detail: 'unexpected' }, 500)
     })
-    const result = await publishToBluecore(record(LC_WORK, LC_INSTANCE), { fetchFn, headers: { Authorization: 'Bearer t' } })
+    const result = await publishToBluecore(record(LC_WORK, LC_INSTANCE), { fetchFn, ingest: true, headers: { Authorization: 'Bearer t' } })
 
     expect(fetchFn.mock.calls.map(([url, o]) => `${o.method} ${url}`)).toEqual([
       'POST /api/works/',
       'GET /api/instances/44444444-4444-4444-8444-444444444444',
       'PUT /api/instances/44444444-4444-4444-8444-444444444444',
     ])
-    expect(fetchFn.mock.calls[0][1].headers).toMatchObject({ Authorization: 'Bearer t', 'Content-Type': 'application/json' })
+    // the record is sent as RDF/XML
+    expect(fetchFn.mock.calls[0][1].headers).toMatchObject({ Authorization: 'Bearer t', 'Content-Type': 'application/rdf+xml' })
+    expect(sent(fetchFn, 0)).toContain('<bf:mainTitle>A title</bf:mainTitle>')
+    expect(fetchFn.mock.calls[1][1].headers).toEqual({ Accept: 'application/ld+json', Authorization: 'Bearer t' })
     // the Instance is sent with the Blue Core URIs
-    expect(JSON.stringify(sent(fetchFn, 2))).not.toContain('id.loc.gov/resources')
+    expect(sent(fetchFn, 2)).not.toContain('id.loc.gov/resources')
+    expect(sent(fetchFn, 2)).toContain(`rdf:about="${BC_INSTANCE}"`)
     expect(result).toEqual({
       status: true,
       postLocation: BC_INSTANCE,
@@ -159,7 +195,7 @@ describe('publishToBluecore', () => {
       'PUT /api/works/33333333-3333-4333-8333-333333333333',
       'PUT /api/instances/44444444-4444-4444-8444-444444444444',
     ])
-    expect(JSON.stringify(sent(fetchFn, 3))).not.toContain(LC_WORK)
+    expect(sent(fetchFn, 3)).not.toContain(LC_WORK)
   })
 
   it('POSTs when a Blue Core URI is not in Blue Core', async () => {

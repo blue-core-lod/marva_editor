@@ -2,20 +2,18 @@
 // ####################  Blue Core Published Status  ###########################
 // ##                                                                         ##
 // ## Asks the Blue Core API whether the open record's Instance / Work is in  ##
-// ## the Blue Core store, and when it was last updated there (updated_at),   ##
+// ## the Blue Core store, and when it was last updated there (the time of    ##
+// ## its latest version, from GET /{instances|works}/{uuid}/versions),      ##
 // ## so the Save dropdown can show "Published 5 min ago" from the database   ##
 // ## rather than from this browser. A new record is stored under Blue Core  ##
 // ## URIs of its own, which ../publish.js remembers when it publishes it.    ##
 // #############################################################################
 
-import { asUtc } from '@/bluecore/search'
 import { returnPublishedUri } from '@/bluecore/publish'
 
 const apiBase = (import.meta.env.VITE_BLUECORE_API_PATH || '/api/').replace(/\/+$/, '')
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
 const RESOURCE_PATH = new RegExp(`/(instances|works)/(${UUID})(?:[/?#.]|$)`, 'i')
-// the API's JSON that includes created_at / updated_at (plain JSON-LD has the graph only)
-const ACCEPT = 'application/vnd.sinopia+json'
 
 /**
 * The Instances and Works of a record that could be in Blue Core: any whose URI ends in
@@ -42,18 +40,19 @@ export function returnBluestoreRefs(profile) {
 * @param {Array} refs - from returnBluestoreRefs
 * @param {function} fetchFn
 * @return {Promise<{state: string, updatedAt: number|null}>} - state is 'found' (updatedAt is
-*   the latest updated_at of its Instance / Work), 'missing' or 'error'
+*   when its Instance / Work was last saved: the latest of their versions), 'missing' or 'error'
 */
 export async function fetchBluestoreState(refs, fetchFn = fetch) {
   let updatedAt = null
   let failed = false
   for (const { kind, uuid } of refs) {
     try {
-      const response = await fetchFn(`${apiBase}/${kind}/${uuid}`, { headers: { Accept: ACCEPT } })
+      // every save stores a version, oldest first; its timestamp is the record's updated_at
+      const response = await fetchFn(`${apiBase}/${kind}/${uuid}/versions`)
       if (response.status === 404) { continue }
       if (!response.ok) { failed = true; continue }
-      const body = await response.json()
-      const time = Date.parse(asUtc(String(body.updated_at || body.created_at || '')))
+      const versions = (await response.json()).versions || []
+      const time = versions.length ? Date.parse(versions[versions.length - 1].timestamp) : NaN
       if (Number.isFinite(time)) {
         updatedAt = Math.max(updatedAt || 0, time)
       } else {
