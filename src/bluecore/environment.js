@@ -18,7 +18,7 @@ export const dev = {
   ldpjs : "",  //TODO: Needs to be implemented.
   util  : utilBase,
   scriptshifter: 'https://bibframe.org/scriptshifter/',
-  publish: `${apiBase}batches/upload/`, // Bluecore API Endpoint
+  publish: apiBase, // Bluecore API: publishing saves through its /works/, /instances/ and /hubs/ routes (src/bluecore/publish.js)
   exportToCatalog: `${apiBase}export/`, // Bluecore API Endpoint (Export to Catalog)
   bluecoreSearch: `${apiBase}search/`, // Bluecore API Endpoint (Load page instance search)
   bluecoreSearchPage: `${apiBase}search`, // Bluecore Search page (Load page title/author search link)
@@ -49,7 +49,7 @@ export const stg = {
   ldpjs : "",  //TODO: Needs to be implemented. original endpoint:'http://localhost:9401/marva/api-staging/'
   util  : utilBase,
   scriptshifter: 'https://bibframe.org/scriptshifter/',
-  publish: `${apiBase}batches/upload/`, // Bluecore API Endpoint
+  publish: apiBase, // Bluecore API: publishing saves through its /works/, /instances/ and /hubs/ routes (src/bluecore/publish.js)
   exportToCatalog: `${apiBase}export/`, // Bluecore API Endpoint (Export to Catalog)
   bluecoreSearch: `${apiBase}search/`, // Bluecore API Endpoint (Load page instance search)
   bluecoreSearchPage: `${apiBase}search`, // Bluecore Search page (Load page title/author search link)
@@ -80,7 +80,7 @@ export const prod = {
   ldpjs : "",  //TODO: Needs to be implemented.
   util  : utilBase,
   scriptshifter: 'https://bibframe.org/scriptshifter/',
-  publish: `${apiBase}batches/upload/`, // Bluecore API Endpoint
+  publish: apiBase, // Bluecore API: publishing saves through its /works/, /instances/ and /hubs/ routes (src/bluecore/publish.js)
   exportToCatalog: `${apiBase}export/`, // Bluecore API Endpoint (Export to Catalog)
   bluecoreSearch: `${apiBase}search/`, // Bluecore API Endpoint (Load page instance search)
   bluecoreSearchPage: `${apiBase}search`, // Bluecore Search page (Load page title/author search link)

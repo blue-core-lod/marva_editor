@@ -1,0 +1,219 @@
+/* BLUECORE: the Save dropdown (../save-menu.js) and toasts (../views/toast.js), kept out of the LC components.
+   The nav and its menus take their colors from the user's nav preferences (and can be dark),
+   so text inherits the nav color and status is shown with colored dots, not colored text. */
+
+:root {
+  --bc-status-ok: #1e8e3e;
+  --bc-status-warn: #f29900;
+  --bc-status-busy: #1a73e8;
+  --bc-status-error: #d93025;
+}
+
+/* ---- dropdown button in the nav ---- */
+
+#nav-holder .bar > .bc-save-menu > .label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bc-save-menu-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+  background: rgba(128, 128, 128, 0.15);
+}
+
+.bc-save-menu-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--bc-status-ok);
+}
+
+.bc-save-menu--unsaved .bc-save-menu-dot { background: var(--bc-status-warn); }
+.bc-save-menu--error .bc-save-menu-dot { background: var(--bc-status-error); }
+.bc-save-menu--busy .bc-save-menu-dot {
+  background: var(--bc-status-busy);
+  animation: bc-save-pulse 1.2s ease-in-out infinite;
+}
+
+.bc-save-menu--busy > .icon {
+  animation: bc-save-spin 1s linear infinite;
+}
+.bc-save-menu--error > .icon { color: var(--bc-status-error); }
+
+/* ---- rows in the dropdown ---- */
+
+.bar-menu-item.bc-save-item-row {
+  /* room for the status line under the label */
+  height: auto !important;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.bc-save-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.25;
+}
+
+.bc-save-item-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8em;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+.bc-save-item-meta--ok::before,
+.bc-save-item-meta--warn::before,
+.bc-save-item-meta--busy::before,
+.bc-save-item-meta--error::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+.bc-save-item-meta--ok::before { background: var(--bc-status-ok); }
+.bc-save-item-meta--warn::before { background: var(--bc-status-warn); }
+.bc-save-item-meta--error::before { background: var(--bc-status-error); }
+.bc-save-item-meta--busy::before {
+  background: var(--bc-status-busy);
+  animation: bc-save-pulse 1.2s ease-in-out infinite;
+}
+.bc-save-item-meta--error { opacity: 0.95; }
+
+/* hovered rows have a blue background: keep the status dots visible on it */
+.bar-menu-item.bc-save-item-row:hover .bc-save-item-meta::before {
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+}
+
+/* ---- LC's publish window (PostModal.vue) ---- */
+
+/* Blue Core doesn't use LCAP: hide "Open in LCAP" after a publish (its link goes to the
+   LCAP productivity tool, the `lcap` url in ../environment.js) */
+a[href*="/lcap-productivity/"] {
+  display: none;
+}
+
+/* ---- toasts ---- */
+
+#bc-toasts {
+  position: fixed;
+  top: calc(var(--bluecore-header-height, 0px) + 56px);
+  right: 16px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(380px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.bc-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 10px 10px 12px;
+  border-radius: 8px;
+  border-left: 4px solid var(--bc-status-busy);
+  background: #fff;
+  color: #202124;
+  box-shadow: 0 4px 16px rgba(60, 64, 67, 0.25);
+  font-family: Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  pointer-events: auto;
+  animation: bc-toast-in 0.2s ease-out;
+}
+.bc-toast--leaving {
+  opacity: 0;
+  transform: translateX(16px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.bc-toast--success { border-left-color: var(--bc-status-ok); }
+.bc-toast--warning { border-left-color: var(--bc-status-warn); }
+.bc-toast--error { border-left-color: var(--bc-status-error); }
+
+.bc-toast-icon { font-size: 20px; color: var(--bc-status-busy); }
+.bc-toast--success .bc-toast-icon { color: var(--bc-status-ok); }
+.bc-toast--warning .bc-toast-icon { color: var(--bc-status-warn); }
+.bc-toast--error .bc-toast-icon { color: var(--bc-status-error); }
+.bc-toast--busy .bc-toast-icon { animation: bc-save-spin 1s linear infinite; }
+
+.bc-toast-body { flex: 1; min-width: 0; }
+.bc-toast-message { font-weight: 500; }
+.bc-toast-detail {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #5f6368;
+  overflow-wrap: anywhere;
+}
+
+.bc-toast-close {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 18px;
+  color: #5f6368;
+  cursor: pointer;
+}
+.bc-toast-close:hover { color: #202124; }
+
+@keyframes bc-save-spin { to { transform: rotate(-360deg); } }
+@keyframes bc-save-pulse { 50% { opacity: 0.35; } }
+@keyframes bc-toast-in { from { opacity: 0; transform: translateY(-8px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .bc-save-menu--busy > .icon,
+  .bc-save-menu--busy .bc-save-menu-dot,
+  .bc-save-item-meta--busy::before,
+  .bc-toast--busy .bc-toast-icon,
+  .bc-toast { animation: none; }
+}
+
+/* ---- Blue Core mark icon (../views/bluecore-icon.js) ---- */
+
+svg.bc-icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  overflow: visible;
+}
+/* menu rows size their icons with this variable (Material icons use it as a font size) */
+.bar-menu-item > svg.bc-icon {
+  width: calc(var(--bar-menu-item-icon-size, 15px) * 1.2);
+  height: calc(var(--bar-menu-item-icon-size, 15px) * 1.2);
+}
+.bc-icon-circle { fill: var(--bc-brand, #003caf); }
+.bc-icon-link { fill: #fff; }
+.bc-icon-badge { stroke: #fff; stroke-width: 6; }
+.bc-icon-badge--check { fill: var(--bc-status-ok); }
+.bc-icon-badge--up { fill: var(--bc-status-warn); }
+.bc-icon-badge-mark {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* hovered rows are brand-ish blue: outline the mark so it doesn't disappear */
+.bar-menu-item:hover > svg.bc-icon .bc-icon-circle {
+  stroke: #fff;
+  stroke-width: 5;
+}
+/* pulse the mark while publishing */
+.bc-save-menu--busy .bc-save-item-row--post > svg.bc-icon {
+  animation: bc-save-pulse 1.2s ease-in-out infinite;
+}
