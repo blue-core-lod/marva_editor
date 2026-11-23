@@ -54,8 +54,16 @@ export function returnPublishedUri(uri) {
   return readPublishedUris()[uri] || uri
 }
 
+/**
+* Stores Marva URI -> Blue Core URI mappings. Each one is moved to the end of the list, so the
+* records used most recently are the last to be dropped when the list is trimmed.
+*/
 function rememberPublishedUris(mapping) {
-  const stored = { ...readPublishedUris(), ...mapping }
+  const stored = readPublishedUris()
+  for (const [key, value] of Object.entries(mapping)) {
+    delete stored[key]
+    stored[key] = value
+  }
   const keys = Object.keys(stored)
   for (const key of keys.slice(0, Math.max(0, keys.length - PUBLISHED_URI_LIMIT))) { delete stored[key] }
   try {
@@ -89,10 +97,15 @@ export function parseRecord(xml) {
   return doc
 }
 
-/** Each resource with a URI (rdf:about) in the record, with its types. */
+/**
+* Each top-level resource with a URI (rdf:about) in the record, with its types. Only the
+* children of rdf:RDF are the record: a Work or Instance nested deeper (a related Work under
+* bf:relation, another format under bf:otherPhysicalFormat) is a link, not a record to save,
+* as in Marva's own export (src/lib/utils_export.js, the BF2MARC package).
+*/
 function returnNamedResources(doc) {
   const types = new Map()
-  for (const el of doc.getElementsByTagName('*')) {
+  for (const el of doc.documentElement.children) {
     const uri = rdfAttr(el, 'about')
     if (!uri) { continue }
     if (!types.has(uri)) { types.set(uri, new Set()) }
@@ -232,9 +245,13 @@ export async function publishToBluecore(xml, { hub = false, ingest = false, apiB
   }
   // records published before keep their Blue Core URIs, so they're updated, not added again
   const mapping = {}
+  const marvaUris = {} // Blue Core URI -> the URI Marva has
   for (const resource of returnResourcesToSave(doc, hub)) {
     const published = returnPublishedUri(resource.uri)
-    if (published !== resource.uri) { mapping[resource.uri] = published }
+    if (published !== resource.uri) {
+      mapping[resource.uri] = published
+      marvaUris[published] = resource.uri
+    }
   }
   renameUris(doc, mapping)
 
@@ -277,6 +294,9 @@ export async function publishToBluecore(xml, { hub = false, ingest = false, apiB
 
     const body = await response.json()
     saved.push({ label: resource.label, uri: body.uri, updatedAt: body.updated_at || null })
+    // keep the record's Blue Core URI near the end of the stored list, so it isn't dropped while in use
+    const marvaUri = marvaUris[resource.uri] || resource.uri
+    if (!isNew && marvaUri !== body.uri) { rememberPublishedUris({ [marvaUri]: body.uri }) }
     if (isNew) {
       unsaved.delete(uri)
       learn({ [uri]: body.uri })
@@ -285,20 +305,28 @@ export async function publishToBluecore(xml, { hub = false, ingest = false, apiB
     learn(returnDerivedFrom(body))
 
     // an ingested Work stores its Instances too: look up the URIs Blue Core gave them,
-    // so each Instance is then updated with PUT under its own URI
-    if (resource.collection === 'works' && !ref) {
+    // so each Instance is then updated with PUT under its own URI. This also runs when the
+    // Work is already in Blue Core (a publish tried again after a failed lookup), as long as
+    // the record has an Instance with no Blue Core URI yet.
+    const current = (r) => mapping[r.uri] || r.uri
+    const instancesWithoutUri = resources.filter((r) => r.collection === 'instances'
+      && !returnBluecoreRef(current(r)) && !unsaved.has(current(r)))
+    if (resource.collection === 'works' && instancesWithoutUri.length) {
+      const known = new Set(resources.map(current))
       for (const instanceUri of idsOf((body.data || {}).hasInstance || [])) {
         const instanceRef = returnBluecoreRef(instanceUri)
-        if (!instanceRef || Object.values(mapping).includes(instanceUri)) { continue }
+        if (!instanceRef || known.has(instanceUri) || Object.values(mapping).includes(instanceUri)) { continue }
+        // without its Blue Core URI the Instance would be POSTed again as a second copy, so stop here
+        const lookupFailed = (why) => fail(`Blue Core saved the Work, but could not look up its Instance ${instanceUri} (${why}), so the Instance was not saved. Publish again to finish.`)
+        let jsonld
         try {
           const found = await request('GET', `${base}instances/${instanceRef.uuid}`)
-          if (found.ok) {
-            const jsonld = await found.json()
-            learn(returnDerivedFrom({ uri: jsonld['@id'], data: jsonld }))
-          }
-        } catch {
-          // the Instance is still saved below, with POST
+          if (!found.ok) { return lookupFailed(await readError(found)) }
+          jsonld = await found.json()
+        } catch (error) {
+          return lookupFailed(error.message)
         }
+        learn(returnDerivedFrom({ uri: jsonld['@id'], data: jsonld }))
       }
     }
   }

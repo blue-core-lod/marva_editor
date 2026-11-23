@@ -12,6 +12,7 @@ import {
   returnPublishedUri,
   returnRequestBody,
   returnResourcesToSave,
+  PUBLISHED_URI_LIMIT,
 } from '@/bluecore/publish'
 
 const BF = 'http://id.loc.gov/ontologies/bibframe/'
@@ -24,6 +25,13 @@ const NEW_INSTANCE = 'http://id.loc.gov/resources/instances/e1795181630835'
 const BC_WORK = 'https://bcld.info/works/33333333-3333-4333-8333-333333333333'
 const BC_INSTANCE = 'https://bcld.info/instances/44444444-4444-4444-8444-444444444444'
 const BC_HUB = 'https://bcld.info/hubs/55555555-5555-4555-8555-555555555555'
+const BC_WORK_2 = 'https://bcld.info/works/66666666-6666-4666-8666-666666666666'
+const BC_INSTANCE_2 = 'https://bcld.info/instances/77777777-7777-4777-8777-777777777777'
+const OTHER_NEW_WORK = 'http://id.loc.gov/resources/works/e2222222222222'
+const OTHER_NEW_INSTANCE = 'http://id.loc.gov/resources/instances/e2222222222222'
+// linked records nested inside the record, which are not records to save
+const RELATED_WORK = 'http://id.loc.gov/resources/works/88888888-8888-4888-8888-888888888888'
+const OTHER_FORMAT = 'http://id.loc.gov/resources/instances/99999999-9999-4999-8999-999999999999'
 
 const rdf = (body) => `<rdf:RDF xmlns:rdf="${RDF}" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:bf="${BF}">${body}</rdf:RDF>`
 const record = (work, instance) => rdf(`
@@ -33,6 +41,18 @@ const record = (work, instance) => rdf(`
   </bf:Work>
   <bf:Instance rdf:about="${instance}">
     <bf:instanceOf rdf:resource="${work}"/>
+  </bf:Instance>`)
+const recordWithRelations = (work, instance) => rdf(`
+  <bf:Work rdf:about="${work}">
+    <bf:title><bf:Title><bf:mainTitle>A title</bf:mainTitle></bf:Title></bf:title>
+    <bf:relation><bf:Relationship>
+      <bf:associatedResource><bf:Work rdf:about="${RELATED_WORK}"><rdfs:label>Related</rdfs:label></bf:Work></bf:associatedResource>
+    </bf:Relationship></bf:relation>
+    <bf:hasInstance rdf:resource="${instance}"/>
+  </bf:Work>
+  <bf:Instance rdf:about="${instance}">
+    <bf:instanceOf rdf:resource="${work}"/>
+    <bf:otherPhysicalFormat><bf:Instance rdf:about="${OTHER_FORMAT}"/></bf:otherPhysicalFormat>
   </bf:Instance>`)
 
 const response = (body, status = 200) => Promise.resolve({
@@ -45,6 +65,17 @@ const saved = (uri, derivedFrom, extra = {}) => ({
 const api = (route) => vi.fn((url, options) => route(options.method, url, options.body || null))
 // the RDF/XML a call sent
 const sent = (fetchFn, i) => fetchFn.mock.calls[i][1].body
+// the calls made with this method to a url ending in path
+const calls = (fetchFn, method, path) => fetchFn.mock.calls.filter(([url, o]) => o.method === method && url.endsWith(path))
+// a fake API that mints new Blue Core URIs for each POST
+const mintingApi = (works = [BC_WORK, BC_WORK_2], instances = [BC_INSTANCE, BC_INSTANCE_2]) => {
+  const next = { works: [...works], instances: [...instances] }
+  return api((method, url) => {
+    if (method === 'POST' && url === '/api/works/') { return response(saved(next.works.shift(), null), 201) }
+    if (method === 'POST' && url === '/api/instances/') { return response(saved(next.instances.shift(), null), 201) }
+    return response({ detail: 'unexpected' }, 500)
+  })
+}
 
 beforeEach(() => window.localStorage.clear())
 
@@ -58,6 +89,11 @@ describe('reading a record to publish', () => {
     const hub = parseRecord(rdf(`<bf:Hub rdf:about="${BC_HUB}"><rdf:type rdf:resource="${BF}Work"/></bf:Hub>`))
     expect(returnResourcesToSave(hub)).toEqual([])
     expect(returnResourcesToSave(hub, true)).toEqual([{ collection: 'hubs', label: 'Hub', uri: BC_HUB }])
+  })
+
+  it('lists only the top-level Work and Instance, not the records they link to', () => {
+    const doc = parseRecord(recordWithRelations(NEW_WORK, NEW_INSTANCE))
+    expect(returnResourcesToSave(doc).map((r) => r.uri)).toEqual([NEW_WORK, NEW_INSTANCE])
   })
 
   it('tells records loaded from outside Blue Core from ones made in Marva or loaded from Blue Core', () => {
@@ -136,6 +172,36 @@ describe('publishToBluecore', () => {
     ])
   })
 
+  it('publishes a new record with links as one Work and one Instance, keeping the links', async () => {
+    const fetchFn = mintingApi()
+    const result = await publishToBluecore(recordWithRelations(NEW_WORK, NEW_INSTANCE), { fetchFn })
+    expect(result.status).toBe(true)
+    expect(calls(fetchFn, 'POST', '/works/')).toHaveLength(1)
+    expect(calls(fetchFn, 'POST', '/instances/')).toHaveLength(1)
+    const workBody = calls(fetchFn, 'POST', '/works/')[0][1].body
+    expect(workBody).toContain(RELATED_WORK)
+    expect(workBody).toContain('associatedResource')
+    expect(calls(fetchFn, 'POST', '/instances/')[0][1].body).toContain(OTHER_FORMAT)
+  })
+
+  it('keeps the Blue Core URI of a re-published record after many other records are published', async () => {
+    const stored = { [NEW_WORK]: BC_WORK, [NEW_INSTANCE]: BC_INSTANCE }
+    for (let i = 0; i < PUBLISHED_URI_LIMIT - 2; i++) { stored[`http://id.loc.gov/resources/works/e${i}`] = `${BC_WORK_2}?${i}` }
+    window.localStorage.setItem('bluecore-published-uris', JSON.stringify(stored))
+
+    const putApi = api((method, url) => response(saved(url.includes('/works/') ? BC_WORK : BC_INSTANCE, null)))
+    await publishToBluecore(record(NEW_WORK, NEW_INSTANCE), { fetchFn: putApi })
+    expect(putApi.mock.calls.map(([, o]) => o.method)).toEqual(['PUT', 'PUT'])
+    await publishToBluecore(record(OTHER_NEW_WORK, OTHER_NEW_INSTANCE), { fetchFn: mintingApi([BC_WORK_2], [BC_INSTANCE_2]) })
+
+    expect(returnPublishedUri(NEW_WORK)).toBe(BC_WORK)
+    expect(returnPublishedUri(NEW_INSTANCE)).toBe(BC_INSTANCE)
+    expect(returnPublishedUri(OTHER_NEW_WORK)).toBe(BC_WORK_2)
+    // the oldest unused entries were dropped instead
+    expect(returnPublishedUri('http://id.loc.gov/resources/works/e0')).toBe('http://id.loc.gov/resources/works/e0')
+    expect(Object.keys(JSON.parse(window.localStorage.getItem('bluecore-published-uris')))).toHaveLength(PUBLISHED_URI_LIMIT)
+  })
+
   it('adds a new Instance to a Work already in Blue Core', async () => {
     const fetchFn = api((method, url) => response(saved(url.includes('/works/') ? BC_WORK : BC_INSTANCE, null), method === 'POST' ? 201 : 200))
     await publishToBluecore(record(BC_WORK, NEW_INSTANCE), { fetchFn })
@@ -180,6 +246,47 @@ describe('publishToBluecore', () => {
     // and remembered, so the next publish updates the same record
     expect(returnPublishedUri(LC_WORK)).toBe(BC_WORK)
     expect(returnPublishedUri(LC_INSTANCE)).toBe(BC_INSTANCE)
+  })
+
+  it('does not POST the Instance again when looking up an ingested Instance fails', async () => {
+    for (const lookup of [() => response({ detail: 'boom' }, 500), () => Promise.reject(new Error('Failed to fetch'))]) {
+      window.localStorage.clear()
+      const fetchFn = api((method, url) => {
+        if (method === 'POST' && url === '/api/works/') { return response(saved(BC_WORK, LC_WORK, { hasInstance: [BC_INSTANCE] }), 201) }
+        if (method === 'GET') { return lookup() }
+        return response(saved(BC_INSTANCE, LC_INSTANCE), 201)
+      })
+      const result = await publishToBluecore(record(LC_WORK, LC_INSTANCE), { fetchFn, ingest: true })
+      expect(calls(fetchFn, 'POST', '/instances/')).toHaveLength(0)
+      expect(calls(fetchFn, 'PUT', '')).toHaveLength(0)
+      expect(result.status).toBe(false)
+      expect(result.msg).toMatch(/^Blue Core saved the Work, but could not look up its Instance .* so the Instance was not saved\. Publish again to finish\. Already saved: Work /)
+    }
+  })
+
+  it('publishing again after a failed Instance lookup updates the same Instance, not a new one', async () => {
+    let lookupWorks = false
+    const fetchFn = api((method, url) => {
+      if (url.startsWith('/api/works/')) { return response(saved(BC_WORK, LC_WORK, { hasInstance: [BC_INSTANCE] }), method === 'POST' ? 201 : 200) }
+      if (method === 'GET') {
+        return lookupWorks
+          ? response({ '@id': BC_INSTANCE, adminMetadata: [{ derivedFrom: { '@id': LC_INSTANCE } }] })
+          : response({ detail: 'boom' }, 500)
+      }
+      if (method === 'PUT') { return response(saved(BC_INSTANCE, LC_INSTANCE)) }
+      return response(saved('https://bcld.info/instances/00000000-0000-4000-8000-000000000000', LC_INSTANCE), 201)
+    })
+    expect((await publishToBluecore(record(LC_WORK, LC_INSTANCE), { fetchFn, ingest: true })).status).toBe(false)
+
+    lookupWorks = true
+    fetchFn.mockClear()
+    const retry = await publishToBluecore(record(LC_WORK, LC_INSTANCE), { fetchFn, ingest: true })
+    expect(fetchFn.mock.calls.map(([url, o]) => `${o.method} ${url}`)).toEqual([
+      'PUT /api/works/33333333-3333-4333-8333-333333333333',
+      'GET /api/instances/44444444-4444-4444-8444-444444444444',
+      'PUT /api/instances/44444444-4444-4444-8444-444444444444',
+    ])
+    expect(retry.status).toBe(true)
   })
 
   it('updates a record already in Blue Core, or one published before from this browser', async () => {
