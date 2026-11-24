@@ -4,10 +4,13 @@ import { configDefaults } from 'vitest/config'
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { bluecoreDevHealth } from "./src/bluecore/dev-health.js"; // BLUECORE
+import { bluecoreHeaderFooterAssets } from "./src/bluecore/header-footer-assets.js"; // BLUECORE
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue(), bluecoreDevHealth()], // BLUECORE: /marva/health on the dev server
+  // BLUECORE START: /marva/health on the dev server; the shared header and footer in <head>
+  plugins: [vue(), bluecoreDevHealth(), bluecoreHeaderFooterAssets()],
+  // BLUECORE END
   base: '/marva/',
   // build: {
   //   sourcemap: true,
