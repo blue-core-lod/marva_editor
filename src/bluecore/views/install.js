@@ -8,9 +8,10 @@
 // ## every Blue Core app. main.js calls installBluecoreHeaderFooter(app)     ##
 // ## once, after pinia is installed and before the app mounts. It:          ##
 // ##  1. adds the Blue Core preferences (Preferences > Blue Core),           ##
-// ##  2. once Marva has mounted, loads the stack's script and puts the       ##
-// ##     header above #app and the footer below it, following the slim and  ##
-// ##     hide preferences, with Logout for a signed-in user,                 ##
+// ##  2. once Marva has mounted, puts the header above #app and the footer  ##
+// ##     below it, following the slim and hide preferences, with Logout for  ##
+// ##     a signed-in user. The stack's script is already in <head> (see      ##
+// ##     ../header-footer-assets.js), so they show as Marva first draws,     ##
 // ##  3. shrinks #app and moves the nav bar (teleported to body) down by     ##
 // ##     the header and footer heights,                                      ##
 // ##  4. rescales the LC views' returnPixleAsPercent(), which measures the   ##
@@ -29,10 +30,11 @@ import {
   returnBluecoreHeaderFooterHeights,
   rescaleWindowPercentToViewArea,
 } from '@/bluecore/layout'
+import { HEADER_FOOTER_SCRIPT } from '@/bluecore/header-footer-assets'
 import '@/bluecore/styles/bluecore-layout.css'
 
 // served by bluecore-stack (nginx/assets/bluecore/), on the same host as Marva
-export const HEADER_FOOTER_SCRIPT = '/assets/bluecore/bluecore-header-footer.js'
+export { HEADER_FOOTER_SCRIPT }
 
 const PATCHED = Symbol('bluecoreRescaled')
 
